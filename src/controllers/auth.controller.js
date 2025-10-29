@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { bodyToSignUp, bodyToSignIn, bodyToRefresh } from "../dtos/auth.dto.js";
-import { signUp, signIn, signOut, refresh } from "../services/auth.service.js";
+import { signUp, signIn, signOut, refresh, socialLogin } from "../services/auth.service.js";
 import { InvalidRequestError } from "../errors/auth.error.js";
 
 export const handleSignUp = async (req, res, next) => {
@@ -537,4 +537,36 @@ export const handleProtect = async (req, res, next) => {
   } catch (err) {
     return next(err);
   }
+};
+
+// 소셜 로그인 콜백 핸들러
+export const handleSocialCallback = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        resultType: "FAIL",
+        error: {
+          errorCode: "social_login_failed",
+          reason: "소셜 로그인에 실패했습니다.",
+          data: null,
+        },
+        success: null,
+      });
+    }
+
+    const auth = await socialLogin(req.user);
+    
+    // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터나 리다이렉트 URL로 전달)
+    const redirectUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/auth/callback?accessToken=${auth.accessToken}&refreshToken=${auth.refreshToken}`;
+    
+    res.redirect(redirectUrl);
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// 소셜 로그인 에러 핸들러
+export const handleSocialError = (err, req, res, next) => {
+  const redirectUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/auth/error?error=${encodeURIComponent(err.message || "소셜 로그인에 실패했습니다.")}`;
+  res.redirect(redirectUrl);
 };

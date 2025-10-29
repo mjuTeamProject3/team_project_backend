@@ -1,5 +1,5 @@
+import "dotenv/config";
 import express from "express";
-import dotenv from "dotenv";
 import cors from "cors";
 import swaggerUiExpress from "swagger-ui-express";
 import apiRoute from "./routes/index.route.js";
@@ -8,11 +8,10 @@ import { stateHandler } from "./middlewares/state.middleware.js";
 import { swaggerOptions } from "./configs/swagger.config.js";
 import { corsOptions } from "./configs/cors.config.js";
 import { swaggerHandler } from "./middlewares/swagger.middleware.js";
-
-dotenv.config();
+import "./configs/passport.config.js"; // Passport 설정 초기화
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 
 app.use(cors(corsOptions));
 app.use(express.static("public"));

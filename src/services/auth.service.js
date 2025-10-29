@@ -1,5 +1,5 @@
 import { responseFromUser } from "../dtos/user.dto.js";
-import { addUser, getUser } from "../repositories/user.repository.js";
+import { addUser, getUser, findOrCreateSocialUser } from "../repositories/user.repository.js";
 import {
   getUserSignIn,
   updateUserRefresh,
@@ -35,13 +35,20 @@ export const signUp = async (data) => {
 };
 
 export const signIn = async (data) => {
-  const hashedPassword = createHashedPassword(data.password);
   const user = await getUserSignIn({
     email: data.email,
   });
-  if (user === null || user.password !== hashedPassword) {
+  
+  // 소셜 로그인 사용자는 일반 로그인 불가
+  if (user === null || user.password === null) {
     throw new InvalidRequestError("이메일 또는 비밀번호가 일치하지 않습니다.");
   }
+  
+  const hashedPassword = createHashedPassword(data.password);
+  if (user.password !== hashedPassword) {
+    throw new InvalidRequestError("이메일 또는 비밀번호가 일치하지 않습니다.");
+  }
+  
   const accecsToken = createJwt({ userId: user.id, type: "AT" });
   const refreshToken = createJwt({ userId: user.id, type: "RT" });
 
@@ -86,6 +93,37 @@ export const refresh = async (data) => {
     accessToken: accessToken,
     refreshToken: refreshToken,
   };
+  return responseFromAuth({
+    auth,
+  });
+};
+
+// 소셜 로그인
+export const socialLogin = async (socialUser) => {
+  const user = await findOrCreateSocialUser({
+    provider: socialUser.provider,
+    socialId: socialUser.socialId,
+    email: socialUser.email,
+    name: socialUser.name,
+    avatar: socialUser.avatar,
+  });
+
+  const accessToken = createJwt({ userId: user.id, type: "AT" });
+  const refreshToken = createJwt({ userId: user.id, type: "RT" });
+
+  const updateUser = await updateUserRefresh(user.id, refreshToken);
+  if (!updateUser) {
+    throw new InvalidRequestError("로그인에 실패했습니다.");
+  }
+
+  const auth = {
+    id: user.id,
+    accessToken: accessToken,
+    refreshToken: refreshToken,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+
   return responseFromAuth({
     auth,
   });
