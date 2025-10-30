@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique(map: "email") @db.VarChar(255)
+  name         String   @db.VarChar(255)
+  username     String   @unique @db.VarChar(255)
+  password     String?  @db.VarChar(255)
+  provider     String?  @db.VarChar(50) // 'google', 'kakao', 'naver', null
+  socialId     String?  @db.VarChar(255) // 소셜 로그인 제공자의 사용자 ID
+  avatar       String?  @db.VarChar(255)
+  location     String?  @db.VarChar(255)
+  gender       String?  @db.VarChar(20)
+  birthdate    DateTime? @db.Date
+  sajuKeywords Json?
+  refreshToken String?  @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime(6)
+
+  // relations
+  likesGiven    Like[]       @relation("LikesFrom")
+  likesReceived Like[]       @relation("LikesTo")
+  friendsAsOne  Friendship[] @relation("UserOneFriends")
+  friendsAsTwo  Friendship[] @relation("UserTwoFriends")
+
+  @@map("user")
+}
+
+model Like {
+  id         Int      @id @default(autoincrement())
+  fromUser   User     @relation("LikesFrom", fields: [fromUserId], references: [id])
+  fromUserId Int
+  toUser     User     @relation("LikesTo", fields: [toUserId], references: [id])
+  toUserId   Int
+  createdAt  DateTime @default(now()) @db.DateTime(6)
+
+  @@unique([fromUserId, toUserId])
+  @@map("like")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Friendship {
+  id         Int               @id @default(autoincrement())
+  userOne    User              @relation("UserOneFriends", fields: [userOneId], references: [id])
+  userOneId  Int
+  userTwo    User              @relation("UserTwoFriends", fields: [userTwoId], references: [id])
+  userTwoId  Int
+  status     FriendshipStatus  @default(PENDING)
+  createdAt  DateTime          @default(now()) @db.DateTime(6)
+  updatedAt  DateTime          @default(now()) @updatedAt @db.DateTime(6)
+
+  @@unique([userOneId, userTwoId])
+  @@map("friendship")
+}
