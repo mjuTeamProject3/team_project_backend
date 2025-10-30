@@ -65,12 +65,8 @@ export const initSocket = (httpServer, { corsOptions }) => {
     socketIdToUser.set(socket.id, userId);
     console.log(`[socket] connected user=${userId} sid=${socket.id}`);
 
-    // Debug: log incoming event names to trace wires
-    socket.onAny((event) => {
-      if (event !== "message:send") {
-        console.log(`[onAny] user=${userId} event=${event}`);
-      }
-    });
+    // Debug any events
+    socket.onAny((event) => { if (event !== "message:send") console.log(`[onAny] user=${userId} event=${event}`); });
 
     socket.on("queue:join", async () => {
       console.log(`[queue] join user=${userId}`);
@@ -83,7 +79,6 @@ export const initSocket = (httpServer, { corsOptions }) => {
         rooms.set(roomId, { a, b });
         console.log(`[match] room=${roomId} a=${a} b=${b}`);
         const saju = await getCompatibilityScore({ userIdA: a, userIdB: b });
-        // Load usernames to store in room metadata for reporting convenience
         let aUser = null, bUser = null;
         try {
           aUser = await prisma.user.findUnique({ where: { id: a }, select: { username: true } });
@@ -103,9 +98,14 @@ export const initSocket = (httpServer, { corsOptions }) => {
       }
     });
 
-    socket.on("message:send", ({ roomId, text }) => {
-      if (!rooms.has(roomId)) return;
-      io.to(roomId).emit("message:new", { userId, text, ts: Date.now() });
+    socket.on("message:send", ({ roomId, text, imageUrl }) => {
+      let rid = roomId;
+      if (!rooms.has(rid)) {
+        for (const [r, p] of rooms) { if (p.a === userId || p.b === userId) { rid = r; break; } }
+      }
+      if (!rooms.has(rid)) return;
+      if (!text && !imageUrl) return;
+      io.to(rid).emit("message:new", { userId, text: text || '', imageUrl: imageUrl || null, ts: Date.now() });
     });
 
     socket.on("chat:end", ({ roomId, reason }, cb) => {
@@ -117,20 +117,14 @@ export const initSocket = (httpServer, { corsOptions }) => {
           if (p.a === userId || p.b === userId) { pair = p; rid = r; break; }
         }
       }
-      // Last-resort: derive room from socket.rooms (excluding its own id)
       if (!pair) {
-        for (const r of socket.rooms) {
-          if (r !== socket.id && rooms.has(r)) { pair = rooms.get(r); rid = r; break; }
-        }
+        for (const r of socket.rooms) { if (r !== socket.id && rooms.has(r)) { pair = rooms.get(r); rid = r; break; } }
       }
       if (!pair) { cb && cb({ ok: false, error: "room_not_found" }); return; }
       // Notify first, then remove participants from the room, then clean state
       io.to(rid).emit("chat:ended", { reason: reason || "ended" });
       const socketsInRoom = new Set(io.of("/").adapter.rooms.get(rid) || []);
-      for (const s of socketsInRoom) {
-        const client = io.sockets.sockets.get(s);
-        client?.leave(rid);
-      }
+      for (const s of socketsInRoom) { const client = io.sockets.sockets.get(s); client?.leave(rid); }
       rooms.delete(rid);
       console.log(`[end] closed room=${rid}`);
       cb && cb({ ok: true });
@@ -139,30 +133,14 @@ export const initSocket = (httpServer, { corsOptions }) => {
     socket.on("user:report", async ({ roomId, reason }) => {
       try {
         console.log(`[report] by user=${userId} roomId=${roomId||"?"}`);
-        if (!reason) {
-          socket.emit("user:reported", { ok: false, error: "신고 사유가 필요합니다." });
-          return;
-        }
-        // find room and partner to restrict reporting to the other participant
-        let rid = roomId;
-        let pair = rooms.get(rid) || null;
-        if (!pair) {
-          for (const [r, p] of rooms) {
-            if (p.a === userId || p.b === userId) { pair = p; rid = r; break; }
-          }
-        }
+        if (!reason) { socket.emit("user:reported", { ok: false, error: "신고 사유가 필요합니다." }); return; }
+        let rid = roomId; let pair = rooms.get(rid) || null;
+        if (!pair) { for (const [r, p] of rooms) { if (p.a === userId || p.b === userId) { pair = p; rid = r; break; } } }
         if (!pair) { socket.emit("user:reported", { ok:false, error:"방 정보를 찾을 수 없습니다."}); return; }
         const targetUserId = pair.a === userId ? pair.b : pair.a;
         const target = await prisma.user.findUnique({ where: { id: targetUserId } });
         const targetUsername = target?.username || null;
-
-        await saveReport({
-          reporterUserId: userId,
-          targetUserId,
-          targetUsername,
-          roomId: rid,
-          reason: reason || null,
-        });
+        await saveReport({ reporterUserId: userId, targetUserId, targetUsername, roomId: rid, reason: reason || null });
         socket.emit("user:reported", { ok: true });
         console.log(`[report] saved against user=${targetUserId}`);
       } catch (e) {
@@ -173,22 +151,13 @@ export const initSocket = (httpServer, { corsOptions }) => {
 
     socket.on("topics:suggest", async ({ roomId, context }) => {
       try {
-        let rid = roomId;
-        let pair = rooms.get(rid) || null;
-        if (!pair) {
-          for (const [r, p] of rooms) {
-            if (p.a === userId || p.b === userId) { pair = p; rid = r; break; }
-          }
-        }
+        let rid = roomId; let pair = rooms.get(rid) || null;
+        if (!pair) { for (const [r, p] of rooms) { if (p.a === userId || p.b === userId) { pair = p; rid = r; break; } } }
         if (!pair) return;
-        if (pair.topicsSuggested) {
-          socket.emit("topics:already", { message: "이미 대화 주제를 추천했습니다." });
-          return;
-        }
+        if (pair.topicsSuggested) { socket.emit("topics:already", { message: "이미 대화 주제를 추천했습니다." }); return; }
         const partnerId = pair.a === userId ? pair.b : pair.a;
         const topics = await suggestTopics({ userId, partnerUserId: partnerId, context });
-        pair.topicsSuggested = true;
-        rooms.set(rid, pair);
+        pair.topicsSuggested = true; rooms.set(rid, pair);
         io.to(rid).emit("topics:list", { topics });
       } catch (e) {
         console.error("topics:suggest error", e?.message || e);
@@ -196,9 +165,7 @@ export const initSocket = (httpServer, { corsOptions }) => {
       }
     });
 
-    socket.on("disconnect", () => {
-      cleanupUser(userId);
-    });
+    socket.on("disconnect", () => { cleanupUser(userId); });
   });
 
   return io;

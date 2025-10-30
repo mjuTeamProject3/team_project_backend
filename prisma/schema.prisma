@@ -30,6 +30,9 @@ model User {
   likesReceived Like[]       @relation("LikesTo")
   friendsAsOne  Friendship[] @relation("UserOneFriends")
   friendsAsTwo  Friendship[] @relation("UserTwoFriends")
+  notifications Notification[]
+  messagesSent  Message[]    @relation("FromUser")
+  messagesReceived Message[]  @relation("ToUser")
 
   @@map("user")
 }
@@ -64,4 +67,28 @@ model Friendship {
 
   @@unique([userOneId, userTwoId])
   @@map("friendship")
+}
+
+model Notification {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  type       String    // 'friend_request', 'like', 'message', 'system'
+  content    String?   // json or message
+  refId      Int?      // Related entity (optional)
+  isRead     Boolean   @default(false)
+  processed  Boolean?  @default(false) // 친구요청 처리 알림만 사용
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id])
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  fromUserId Int
+  toUserId   Int
+  text       String
+  imageUrl   String?
+  createdAt  DateTime @default(now())
+  fromUser   User     @relation("FromUser", fields: [fromUserId], references: [id])
+  toUser     User     @relation("ToUser", fields: [toUserId], references: [id])
 }
