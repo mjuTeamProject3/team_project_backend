@@ -2,13 +2,14 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import swaggerUiExpress from "swagger-ui-express";
+import session from "express-session";
 import apiRoute from "./routes/index.route.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { stateHandler } from "./middlewares/state.middleware.js";
 import { swaggerOptions } from "./configs/swagger.config.js";
 import { corsOptions } from "./configs/cors.config.js";
 import { swaggerHandler } from "./middlewares/swagger.middleware.js";
-import "./configs/passport.config.js"; // Passport 설정 초기화
+import passport from "./configs/passport.config.js"; // Passport 설정 초기화
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,6 +18,18 @@ app.use(cors(corsOptions));
 app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// 세션 설정 (소셜 로그인용)
+app.use(session({
+  secret: process.env.JWT_SECRET || 'fallback-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // HTTPS에서는 true로 설정
+}));
+
+// Passport 미들웨어
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use(stateHandler);
 

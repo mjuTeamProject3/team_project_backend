@@ -49,7 +49,7 @@ export const signIn = async (data) => {
     throw new InvalidRequestError("이메일 또는 비밀번호가 일치하지 않습니다.");
   }
   
-  const accecsToken = createJwt({ userId: user.id, type: "AT" });
+  const accessToken = createJwt({ userId: user.id, type: "AT" });
   const refreshToken = createJwt({ userId: user.id, type: "RT" });
 
   const updateUser = await updateUserRefresh(user.id, refreshToken);
@@ -58,7 +58,7 @@ export const signIn = async (data) => {
   }
   const auth = {
     id: user.id,
-    accessToken: accecsToken,
+    accessToken: accessToken,
     refreshToken: refreshToken,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

@@ -10,7 +10,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL || "/v1/api/auth/google/callback",
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/v1/api/auth/google/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -39,7 +39,7 @@ if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
       {
         clientID: process.env.KAKAO_CLIENT_ID,
         clientSecret: process.env.KAKAO_CLIENT_SECRET,
-        callbackURL: process.env.KAKAO_CALLBACK_URL || "/v1/api/auth/kakao/callback",
+        callbackURL: process.env.KAKAO_CALLBACK_URL || "http://localhost:3000/v1/api/auth/kakao/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -68,7 +68,7 @@ if (process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET) {
       {
         clientID: process.env.NAVER_CLIENT_ID,
         clientSecret: process.env.NAVER_CLIENT_SECRET,
-        callbackURL: process.env.NAVER_CALLBACK_URL || "/v1/api/auth/naver/callback",
+        callbackURL: process.env.NAVER_CALLBACK_URL || "http://localhost:3000/v1/api/auth/naver/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
