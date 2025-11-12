@@ -29,9 +29,12 @@
 let socket, roomId, partnerId;
 const log = (m)=>{ const el=document.getElementById('log'); el.textContent += m+"\n"; el.scrollTop=el.scrollHeight; };
 
+// 현재 접속한 URL 자동 감지 (ngrok URL도 자동으로 사용)
+const SERVER_URL = window.location.origin;
+
 document.getElementById('connect').onclick = ()=>{
   const token = document.getElementById('token').value.trim();
-  socket = io("http://localhost:3000", { auth: { token } });
+  socket = io(SERVER_URL, { auth: { token } });
 
   socket.on("connect", ()=>log("connected: "+socket.id));
   socket.on("connect_error", (err)=>log("connect_error: "+(err?.message||err)));

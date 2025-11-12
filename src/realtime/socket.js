@@ -8,8 +8,11 @@ import { prisma } from "../configs/db.config.js";
 // In-memory state (single instance server)
 const userIdToSocket = new Map();
 const socketIdToUser = new Map();
-const waitingQueue = []; // array of userIds
-const rooms = new Map(); // roomId -> { a: userId, b: userId, topicsSuggested?: boolean }
+const waitingQueues = {
+  text: [],  // 텍스트 채팅 대기열
+  video: []  // 영상 통화 대기열
+};
+const rooms = new Map(); // roomId -> { a: userId, b: userId, type: 'text' | 'video', topicsSuggested?: boolean, compatibilityVisible?: boolean }
 
 const makeRoomId = (a, b) => `room_${[a, b].sort().join("_")}`;
 
@@ -27,13 +30,17 @@ export const initSocket = (httpServer, { corsOptions }) => {
       userIdToSocket.delete(userId);
       socketIdToUser.delete(socket.id);
     }
-    // Remove from queue
-    const idx = waitingQueue.indexOf(userId);
-    if (idx >= 0) waitingQueue.splice(idx, 1);
+    // Remove from both queues
+    const textIdx = waitingQueues.text.indexOf(userId);
+    if (textIdx >= 0) waitingQueues.text.splice(textIdx, 1);
+    const videoIdx = waitingQueues.video.indexOf(userId);
+    if (videoIdx >= 0) waitingQueues.video.splice(videoIdx, 1);
     // End rooms containing this user
     for (const [roomId, pair] of rooms) {
       if (pair.a === userId || pair.b === userId) {
-        io.to(roomId).emit("chat:ended", { reason: "disconnect" });
+        // 타입에 따라 다른 이벤트 전송
+        const endEvent = pair.type === 'video' ? "video:ended" : "chat:ended";
+        io.to(roomId).emit(endEvent, { reason: "disconnect" });
         rooms.delete(roomId);
         for (const s of io.of("/").adapter.rooms.get(roomId) || []) {
           const client = io.sockets.sockets.get(s);
@@ -68,16 +75,26 @@ export const initSocket = (httpServer, { corsOptions }) => {
     // Debug any events
     socket.onAny((event) => { if (event !== "message:send") console.log(`[onAny] user=${userId} event=${event}`); });
 
-    socket.on("queue:join", async () => {
-      console.log(`[queue] join user=${userId}`);
-      if (!waitingQueue.includes(userId)) waitingQueue.push(userId);
+    socket.on("queue:join", async ({ type = 'text' } = {}) => {
+      const queueType = type === 'video' ? 'video' : 'text';
+      const queue = waitingQueues[queueType];
+      console.log(`[queue] join user=${userId} type=${queueType}`);
+      
+      if (!queue.includes(userId)) queue.push(userId);
+      
       // Try match
-      if (waitingQueue.length >= 2) {
-        const a = waitingQueue.shift();
-        const b = waitingQueue.shift();
+      if (queue.length >= 2) {
+        const a = queue.shift();
+        const b = queue.shift();
         const roomId = makeRoomId(a, b);
-        rooms.set(roomId, { a, b });
-        console.log(`[match] room=${roomId} a=${a} b=${b}`);
+        rooms.set(roomId, { 
+          a, 
+          b, 
+          type: queueType,
+          compatibilityVisible: true 
+        });
+        console.log(`[match] room=${roomId} a=${a} b=${b} type=${queueType}`);
+        
         const saju = await getCompatibilityScore({ userIdA: a, userIdB: b });
         let aUser = null, bUser = null;
         try {
@@ -89,12 +106,32 @@ export const initSocket = (httpServer, { corsOptions }) => {
         const sb = userIdToSocket.get(b);
         sa?.join(roomId);
         sb?.join(roomId);
-        const payloadA = { roomId, partnerId: b, partnerUsername: bUser?.username || null, compatibility: saju };
-        const payloadB = { roomId, partnerId: a, partnerUsername: aUser?.username || null, compatibility: saju };
+        // initiator 결정: userId가 작은 쪽이 initiator
+        const isAInitiator = a < b;
+        const payloadA = { 
+          roomId, 
+          userId: a,
+          partnerId: b, 
+          partnerUsername: bUser?.username || null, 
+          compatibility: saju,
+          type: queueType,
+          compatibilityVisible: true,
+          isInitiator: isAInitiator
+        };
+        const payloadB = { 
+          roomId, 
+          userId: b,
+          partnerId: a, 
+          partnerUsername: aUser?.username || null, 
+          compatibility: saju,
+          type: queueType,
+          compatibilityVisible: true,
+          isInitiator: !isAInitiator
+        };
         sa?.emit("match:found", payloadA);
         sb?.emit("match:found", payloadB);
       } else {
-        socket.emit("queue:waiting", { position: waitingQueue.indexOf(userId) + 1 });
+        socket.emit("queue:waiting", { position: queue.indexOf(userId) + 1, type: queueType });
       }
     });
 
@@ -122,11 +159,13 @@ export const initSocket = (httpServer, { corsOptions }) => {
       }
       if (!pair) { cb && cb({ ok: false, error: "room_not_found" }); return; }
       // Notify first, then remove participants from the room, then clean state
-      io.to(rid).emit("chat:ended", { reason: reason || "ended" });
+      // 타입에 따라 다른 이벤트 전송
+      const endEvent = pair.type === 'video' ? "video:ended" : "chat:ended";
+      io.to(rid).emit(endEvent, { reason: reason || "ended" });
       const socketsInRoom = new Set(io.of("/").adapter.rooms.get(rid) || []);
       for (const s of socketsInRoom) { const client = io.sockets.sockets.get(s); client?.leave(rid); }
       rooms.delete(rid);
-      console.log(`[end] closed room=${rid}`);
+      console.log(`[end] closed room=${rid} type=${pair.type}`);
       cb && cb({ ok: true });
     });
 
@@ -163,6 +202,60 @@ export const initSocket = (httpServer, { corsOptions }) => {
         console.error("topics:suggest error", e?.message || e);
         socket.emit("topics:list", { topics: [] });
       }
+    });
+
+    // WebRTC 시그널링 이벤트들
+    socket.on("webrtc:offer", ({ roomId, offer }) => {
+      const room = rooms.get(roomId);
+      if (!room || (room.a !== userId && room.b !== userId)) {
+        console.log(`[webrtc] offer rejected: user=${userId} roomId=${roomId}`);
+        return;
+      }
+      console.log(`[webrtc] offer from user=${userId} roomId=${roomId}`);
+      // 상대방에게 offer 전달
+      io.to(roomId).except(socket.id).emit("webrtc:offer", { offer });
+    });
+
+    socket.on("webrtc:answer", ({ roomId, answer }) => {
+      const room = rooms.get(roomId);
+      if (!room || (room.a !== userId && room.b !== userId)) {
+        console.log(`[webrtc] answer rejected: user=${userId} roomId=${roomId}`);
+        return;
+      }
+      console.log(`[webrtc] answer from user=${userId} roomId=${roomId}`);
+      // 상대방에게 answer 전달
+      io.to(roomId).except(socket.id).emit("webrtc:answer", { answer });
+    });
+
+    socket.on("webrtc:ice-candidate", ({ roomId, candidate }) => {
+      const room = rooms.get(roomId);
+      if (!room || (room.a !== userId && room.b !== userId)) {
+        return;
+      }
+      // 상대방에게 ICE candidate 전달
+      io.to(roomId).except(socket.id).emit("webrtc:ice-candidate", { candidate });
+    });
+
+    // 궁합도 표시/숨김 토글
+    socket.on("compatibility:toggle", ({ roomId, visible }, cb) => {
+      let rid = roomId;
+      let pair = rooms.get(rid) || null;
+      if (!pair) {
+        for (const [r, p] of rooms) {
+          if (p.a === userId || p.b === userId) { pair = p; rid = r; break; }
+        }
+      }
+      if (!pair || (pair.a !== userId && pair.b !== userId)) {
+        return cb?.({ ok: false, error: "room_not_found" });
+      }
+      
+      pair.compatibilityVisible = visible;
+      rooms.set(rid, pair);
+      
+      // 양쪽 사용자에게 상태 동기화
+      io.to(rid).emit("compatibility:visibility", { visible });
+      console.log(`[compatibility] toggle user=${userId} roomId=${rid} visible=${visible}`);
+      cb?.({ ok: true });
     });
 
     socket.on("disconnect", () => { cleanupUser(userId); });

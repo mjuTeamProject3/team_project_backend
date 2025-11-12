@@ -168,6 +168,38 @@ Authorization: Bearer {accessToken}
    - 각 플랫폼의 테스트 모드 설정 확인
    - 테스트 사용자 추가 (구글의 경우)
 
+## 📐 프로젝트 구조
+
+### 아키텍처 개요
+프로젝트의 전체 구조와 아키텍처는 **[ARCHITECTURE.md](./ARCHITECTURE.md)** 문서에서 확인할 수 있습니다.
+
+### 📊 의존성 다이어그램
+
+#### 자동 생성
+```bash
+# Mermaid 형식으로 그래프 자동 생성
+npm run dep:graph
+```
+
+#### 수동 다이어그램 (권장)
+```bash
+# 아키텍처 가이드
+code ARCHITECTURE.md
+
+# 시각화 가이드
+code DIAGRAM_GUIDE.md
+
+# 다이어그램 파일들
+code architecture-clean.mmd           # ✅ 깔끔한 레이어 구조 (추천!)
+code project-folders-only.mmd         # 폴더만 표시
+code project-complete.mmd             # 전체 파일
+```
+
+**시각화 방법:**
+- VS Code: Mermaid Preview 확장 설치
+- 온라인: https://mermaid.live/
+- GitHub: 자동 렌더링
+
 ## 시작하기
 
 ### 1. 환경 변수 설정 (.env 파일 생성)

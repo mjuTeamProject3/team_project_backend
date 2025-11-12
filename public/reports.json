@@ -51,5 +51,14 @@
     "roomId": "room_1_2",
     "reason": "hello",
     "createdAt": "2025-10-30T13:39:59.533Z"
+  },
+  {
+    "id": "r_1762945841948_ukqdvy",
+    "reporterUserId": 9,
+    "targetUserId": 10,
+    "targetUsername": "강민",
+    "roomId": "room_10_9",
+    "reason": "강민석 ㅈ같네요",
+    "createdAt": "2025-11-12T11:10:41.948Z"
   }
 ]

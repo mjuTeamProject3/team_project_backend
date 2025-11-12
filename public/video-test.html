@@ -1,0 +1,483 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>랜덤 영상 통화 테스트</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .controls { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px; }
+  .controls button { margin: 5px; padding: 10px 15px; cursor: pointer; }
+  .video-container { display: flex; gap: 20px; margin: 20px 0; }
+  .video-box { flex: 1; position: relative; }
+  video { width: 100%; max-width: 500px; border: 2px solid #ddd; border-radius: 8px; background: #000; }
+  .local-video { transform: scaleX(-1); } /* 거울 모드 */
+  .compatibility-overlay { 
+    position: absolute; 
+    top: 10px; 
+    left: 10px; 
+    background: rgba(0,0,0,0.8); 
+    color: white; 
+    padding: 15px; 
+    border-radius: 8px; 
+    min-width: 200px;
+    z-index: 10;
+  }
+  .compatibility-overlay.hidden { display: none; }
+  .compatibility-score { font-size: 24px; font-weight: bold; color: #4CAF50; }
+  .compatibility-verdict { margin-top: 10px; font-size: 14px; }
+  .log-container { 
+    height: 300px; 
+    overflow: auto; 
+    border: 1px solid #ccc; 
+    padding: 10px; 
+    background: #fafafa; 
+    font-family: monospace; 
+    font-size: 12px;
+  }
+  input[type="text"] { padding: 8px; width: 400px; margin: 5px; }
+  .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+  .status.waiting { background: #fff3cd; }
+  .status.matched { background: #d4edda; }
+  .status.connected { background: #d1ecf1; }
+  .status.disconnected { background: #f8d7da; }
+</style>
+<body>
+  <div class="container">
+    <h1>랜덤 영상 통화 테스트</h1>
+    
+    <div class="controls">
+      <div>
+        <input id="token" type="text" placeholder="JWT 토큰 입력" />
+        <button id="connect">연결</button>
+        <button id="disconnect">연결 해제</button>
+      </div>
+      <div style="margin-top: 10px;">
+        <button id="join">랜덤 영상 매칭 시작</button>
+        <button id="end">통화 종료</button>
+        <button id="toggleCompatibility">궁합도 숨기기/보이기</button>
+        <button id="report">신고</button>
+      </div>
+      <div id="status" class="status disconnected">연결 안됨</div>
+    </div>
+
+    <div class="video-container">
+      <div class="video-box">
+        <h3>상대방 (원격)</h3>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div id="compatibilityOverlay" class="compatibility-overlay">
+          <div class="compatibility-score" id="compatibilityScore">-</div>
+          <div class="compatibility-verdict" id="compatibilityVerdict">매칭 대기 중...</div>
+          <button onclick="toggleCompatibility()" style="margin-top: 10px; padding: 5px 10px;">숨기기</button>
+        </div>
+      </div>
+      <div class="video-box">
+        <h3>나 (로컬)</h3>
+        <video id="localVideo" class="local-video" autoplay playsinline muted></video>
+      </div>
+    </div>
+
+    <div id="reportBox" style="display:none; margin-top:20px; padding:15px; background:#fff3cd; border-radius:8px;">
+      <h4>신고 작성</h4>
+      <input id="reason" type="text" placeholder="신고 사유 입력" style="width: 500px;" />
+      <button id="reportSubmit">신고 제출</button>
+      <button id="reportCancel">취소</button>
+    </div>
+
+    <h3>로그</h3>
+    <div id="log" class="log-container"></div>
+  </div>
+
+<script>
+// 현재 접속한 URL 자동 감지 (ngrok URL도 자동으로 사용)
+const SERVER_URL = window.location.origin;
+
+let socket = null;
+let peer = null;
+let localStream = null;
+let roomId = null;
+let partnerId = null;
+let compatibility = null;
+let compatibilityVisible = true;
+let pendingSignals = []; // peer 생성 전 시그널링 데이터 저장
+
+const log = (msg) => {
+  const el = document.getElementById('log');
+  const time = new Date().toLocaleTimeString();
+  el.textContent += `[${time}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+  console.log(msg);
+};
+
+const updateStatus = (text, className) => {
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = text;
+  statusEl.className = `status ${className}`;
+};
+
+// Socket 연결
+document.getElementById('connect').onclick = async () => {
+  const token = document.getElementById('token').value.trim();
+  if (!token) {
+    alert('JWT 토큰을 입력하세요');
+    return;
+  }
+
+  socket = io(SERVER_URL, { auth: { token } });
+
+  socket.on("connect", () => {
+    log("✅ Socket 연결됨: " + socket.id);
+    updateStatus("연결됨", "connected");
+  });
+
+  socket.on("connect_error", (err) => {
+    log("❌ 연결 오류: " + (err?.message || err));
+    updateStatus("연결 실패", "disconnected");
+  });
+
+  socket.on("disconnect", (reason) => {
+    log("🔌 연결 해제: " + reason);
+    updateStatus("연결 해제됨", "disconnected");
+  });
+
+  socket.on("queue:waiting", ({ position, type }) => {
+    log(`⏳ 대기 중... 위치: ${position}, 타입: ${type}`);
+    updateStatus(`대기 중... (위치: ${position})`, "waiting");
+  });
+
+  socket.on("match:found", async (data) => {
+    roomId = data.roomId;
+    partnerId = data.partnerId;
+    compatibility = data.compatibility;
+    compatibilityVisible = data.compatibilityVisible !== false;
+    const isInitiator = data.isInitiator || false;
+
+    log(`🎯 매칭 성공! 방: ${roomId}, 상대: ${partnerId}`);
+    log(`📊 궁합도: ${compatibility?.score ?? 'N/A'}%`);
+    log(`🔧 Initiator: ${isInitiator ? '나' : '상대방'}`);
+    updateStatus("매칭됨 - 카메라 권한 요청 대기 중...", "matched");
+
+    // 궁합도 표시
+    updateCompatibilityDisplay();
+
+    // 사용자에게 권한 요청 안내
+    const proceed = confirm("카메라/마이크 권한이 필요합니다.\n\n권한을 허용하시겠습니까?\n\n(브라우저에서 권한 요청 팝업이 나타납니다)");
+    if (!proceed) {
+      log("⚠️ 사용자가 권한 요청을 취소했습니다");
+      updateStatus("권한 요청 취소됨", "disconnected");
+      return;
+    }
+
+    // 미디어 스트림 가져오기 및 WebRTC 초기화
+    await initializeWebRTC(isInitiator);
+  });
+
+  socket.on("video:ended", ({ reason }) => {
+    log(`🔚 통화 종료: ${reason}`);
+    cleanup();
+    updateStatus("통화 종료됨", "disconnected");
+  });
+
+  // WebRTC 시그널링 이벤트
+  socket.on("webrtc:offer", ({ offer }) => {
+    log("📨 Offer 수신");
+    if (peer) {
+      peer.signal(offer);
+    } else {
+      log("⏳ Peer 생성 대기 중... Offer 저장");
+      pendingSignals.push(offer);
+    }
+  });
+
+  socket.on("webrtc:answer", ({ answer }) => {
+    log("📨 Answer 수신");
+    if (peer) {
+      peer.signal(answer);
+    } else {
+      log("⏳ Peer 생성 대기 중... Answer 저장");
+      pendingSignals.push(answer);
+    }
+  });
+
+  socket.on("webrtc:ice-candidate", ({ candidate }) => {
+    log("📨 ICE Candidate 수신");
+    if (peer) {
+      peer.signal(candidate);
+    } else {
+      log("⏳ Peer 생성 대기 중... ICE Candidate 저장");
+      pendingSignals.push(candidate);
+    }
+  });
+
+  // 궁합도 표시/숨김
+  socket.on("compatibility:visibility", ({ visible }) => {
+    compatibilityVisible = visible;
+    updateCompatibilityDisplay();
+    log(`👁️ 궁합도 표시: ${visible ? '보임' : '숨김'}`);
+  });
+
+  // 신고 결과
+  socket.on("user:reported", (result) => {
+    if (result?.ok) {
+      log("✅ 신고 완료");
+      document.getElementById('reportBox').style.display = 'none';
+    } else {
+      log("❌ 신고 실패: " + (result?.error || "unknown"));
+    }
+  });
+};
+
+// 미디어 스트림 가져오기 및 WebRTC 초기화
+async function initializeWebRTC(isInitiator = false) {
+  try {
+    // HTTPS 확인 (카메라 접근을 위해 필요)
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      log("⚠️ HTTPS가 필요합니다. ngrok URL을 사용하세요.");
+      alert("카메라 접근을 위해 HTTPS가 필요합니다.\nngrok URL(https://...)을 사용하세요.");
+      return;
+    }
+
+    // 미디어 스트림 가져오기
+    log("📹 미디어 스트림 요청 중...");
+    log("💡 브라우저에서 권한 요청 팝업이 나타나면 '허용'을 클릭하세요");
+    updateStatus("카메라/마이크 권한 요청 중...", "matched");
+    
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        }
+      });
+    } catch (err) {
+      log("❌ 미디어 스트림 오류: " + err.name + " - " + err.message);
+      let errorMsg = "";
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMsg = "카메라/마이크 권한이 거부되었습니다.\n\n해결 방법:\n";
+        errorMsg += "1. 브라우저 주소창 왼쪽 자물쇠 아이콘 클릭\n";
+        errorMsg += "2. '사이트 설정' 또는 '권한' 클릭\n";
+        errorMsg += "3. 카메라와 마이크를 '허용'으로 변경\n";
+        errorMsg += "4. 페이지를 새로고침하고 다시 시도\n\n";
+        errorMsg += "또는 브라우저 설정에서 직접 권한을 허용할 수 있습니다.";
+        alert(errorMsg);
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMsg = "카메라/마이크를 찾을 수 없습니다.\n\n기기에 카메라와 마이크가 연결되어 있는지 확인하세요.";
+        alert(errorMsg);
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMsg = "카메라/마이크에 접근할 수 없습니다.\n\n다른 앱에서 카메라/마이크를 사용 중일 수 있습니다.\n다른 앱을 종료하고 다시 시도하세요.";
+        alert(errorMsg);
+      } else {
+        errorMsg = "미디어 스트림 오류: " + err.message + "\n\n오류 타입: " + err.name;
+        alert(errorMsg);
+      }
+      updateStatus("권한 오류", "disconnected");
+      throw err;
+    }
+
+    const localVideo = document.getElementById('localVideo');
+    localVideo.srcObject = localStream;
+    log("✅ 로컬 스트림 획득 성공");
+
+    // Simple-Peer 생성
+    peer = new SimplePeer({
+      initiator: isInitiator,
+      trickle: false,
+      stream: localStream,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          // 무료 TURN 서버 추가 (다른 네트워크 연결 시 필요)
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          }
+        ]
+      }
+    });
+
+    // 시그널링 데이터 전송
+    peer.on('signal', (data) => {
+      if (!roomId) return;
+
+      if (data.type === 'offer') {
+        log("📤 Offer 전송");
+        socket.emit("webrtc:offer", { roomId, offer: data });
+      } else if (data.type === 'answer') {
+        log("📤 Answer 전송");
+        socket.emit("webrtc:answer", { roomId, answer: data });
+      } else {
+        // ICE Candidate
+        socket.emit("webrtc:ice-candidate", { roomId, candidate: data });
+      }
+    });
+
+    // 원격 스트림 수신
+    peer.on('stream', (stream) => {
+      log("✅ 원격 스트림 수신 성공!");
+      const remoteVideo = document.getElementById('remoteVideo');
+      remoteVideo.srcObject = stream;
+      remoteVideo.onloadedmetadata = () => {
+        log("📹 원격 비디오 메타데이터 로드 완료");
+        remoteVideo.play().catch(err => {
+          log("⚠️ 비디오 재생 오류: " + err.message);
+        });
+      };
+      updateStatus("통화 연결됨", "connected");
+    });
+
+    // ICE 연결 상태 추적
+    peer.on('iceStateChange', (state) => {
+      log(`🧊 ICE 상태 변경: ${state}`);
+      if (state === 'failed' || state === 'disconnected') {
+        log("⚠️ ICE 연결 실패 - NAT/방화벽 문제일 수 있습니다");
+        updateStatus("연결 실패 - 네트워크 문제", "disconnected");
+      }
+    });
+
+    // 대기 중인 시그널링 데이터 처리
+    if (pendingSignals.length > 0) {
+      log(`📨 대기 중인 시그널링 데이터 ${pendingSignals.length}개 처리 중...`);
+      pendingSignals.forEach(signal => {
+        peer.signal(signal);
+      });
+      pendingSignals = [];
+    }
+
+    // 연결 상태
+    peer.on('connect', () => {
+      log("🔗 WebRTC 연결 완료!");
+      updateStatus("통화 중", "connected");
+    });
+
+    peer.on('close', () => {
+      log("🔌 WebRTC 연결 종료");
+      cleanup();
+    });
+
+    peer.on('error', (err) => {
+      log("❌ WebRTC 오류: " + err.message);
+      log("❌ 오류 상세: " + JSON.stringify(err));
+      updateStatus("연결 오류 발생", "disconnected");
+    });
+
+  } catch (err) {
+    log("❌ WebRTC 초기화 실패: " + err.message);
+    log("❌ 오류 타입: " + err.name);
+    updateStatus("연결 실패", "disconnected");
+  }
+}
+
+// 정리 함수
+function cleanup() {
+  if (peer) {
+    peer.destroy();
+    peer = null;
+  }
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+    localStream = null;
+  }
+  const localVideo = document.getElementById('localVideo');
+  const remoteVideo = document.getElementById('remoteVideo');
+  localVideo.srcObject = null;
+  remoteVideo.srcObject = null;
+  roomId = null;
+  partnerId = null;
+  pendingSignals = []; // 대기 중인 시그널링 데이터 초기화
+}
+
+// 궁합도 표시 업데이트
+function updateCompatibilityDisplay() {
+  const overlay = document.getElementById('compatibilityOverlay');
+  const scoreEl = document.getElementById('compatibilityScore');
+  const verdictEl = document.getElementById('compatibilityVerdict');
+
+  if (compatibility && compatibilityVisible) {
+    overlay.classList.remove('hidden');
+    scoreEl.textContent = compatibility.score !== null ? `${compatibility.score}%` : 'N/A';
+    verdictEl.textContent = compatibility.verdict || '궁합도 정보 없음';
+  } else {
+    overlay.classList.add('hidden');
+  }
+}
+
+// 궁합도 토글
+function toggleCompatibility() {
+  if (!roomId) return;
+  compatibilityVisible = !compatibilityVisible;
+  socket.emit("compatibility:toggle", { roomId, visible: compatibilityVisible }, (ack) => {
+    if (ack?.ok) {
+      updateCompatibilityDisplay();
+    }
+  });
+}
+
+// 버튼 이벤트
+document.getElementById('disconnect').onclick = () => {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+  cleanup();
+  updateStatus("연결 해제됨", "disconnected");
+};
+
+document.getElementById('join').onclick = () => {
+  if (!socket || !socket.connected) {
+    alert('먼저 Socket에 연결하세요');
+    return;
+  }
+  log("🚀 영상 통화 매칭 시작");
+  socket.emit("queue:join", { type: 'video' });
+};
+
+document.getElementById('end').onclick = () => {
+  if (!roomId) {
+    log("⚠️ 활성 통화가 없습니다");
+    return;
+  }
+  socket.emit("chat:end", { roomId, reason: "user_ended" }, (ack) => {
+    log("종료 요청: " + JSON.stringify(ack));
+  });
+};
+
+document.getElementById('toggleCompatibility').onclick = toggleCompatibility;
+
+document.getElementById('report').onclick = () => {
+  document.getElementById('reportBox').style.display = 'block';
+};
+
+document.getElementById('reportCancel').onclick = () => {
+  document.getElementById('reportBox').style.display = 'none';
+};
+
+document.getElementById('reportSubmit').onclick = () => {
+  const reason = document.getElementById('reason').value.trim();
+  if (!reason) {
+    log("⚠️ 신고 사유를 입력하세요");
+    return;
+  }
+  if (!roomId) {
+    log("⚠️ 활성 통화가 없습니다");
+    return;
+  }
+  socket.emit("user:report", { roomId, reason });
+  document.getElementById('reason').value = '';
+};
+</script>
+</body>
+

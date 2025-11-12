@@ -1,0 +1,112 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>FateTry 테스트 페이지</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+    background: #f5f5f5;
+  }
+  .container {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  h1 {
+    color: #333;
+    margin-bottom: 10px;
+  }
+  .subtitle {
+    color: #666;
+    margin-bottom: 30px;
+  }
+  .test-links {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .test-link {
+    display: block;
+    padding: 20px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background 0.3s;
+  }
+  .test-link:hover {
+    background: #0056b3;
+  }
+  .test-link h3 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+  }
+  .test-link p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+  }
+  .info {
+    margin-top: 30px;
+    padding: 15px;
+    background: #e7f3ff;
+    border-left: 4px solid #007bff;
+    border-radius: 4px;
+  }
+  .info h4 {
+    margin-top: 0;
+    color: #007bff;
+  }
+  .info ul {
+    margin: 10px 0;
+    padding-left: 20px;
+  }
+  .info li {
+    margin: 5px 0;
+  }
+</style>
+<body>
+  <div class="container">
+    <h1>🎯 FateTry 테스트 페이지</h1>
+    <p class="subtitle">랜덤 채팅 및 영상 통화 기능을 테스트할 수 있습니다.</p>
+    
+    <div class="test-links">
+      <a href="/auth-test.html" class="test-link">
+        <h3>🔑 JWT 토큰 발급</h3>
+        <p>회원가입 및 로그인을 통해 JWT 토큰을 발급받습니다.</p>
+      </a>
+      
+      <a href="/socket-test.html" class="test-link">
+        <h3>💬 랜덤 텍스트 채팅</h3>
+        <p>랜덤 매칭 후 텍스트 메시지로 채팅을 테스트합니다.</p>
+      </a>
+      
+      <a href="/video-test.html" class="test-link">
+        <h3>📹 랜덤 영상 통화</h3>
+        <p>랜덤 매칭 후 WebRTC를 통한 영상 통화를 테스트합니다.</p>
+      </a>
+    </div>
+    
+    <div class="info">
+      <h4>📋 사용 방법</h4>
+      <ol>
+        <li><strong>JWT 토큰 발급</strong> 페이지에서 회원가입 또는 로그인</li>
+        <li>발급된 Access Token을 복사</li>
+        <li><strong>랜덤 채팅</strong> 또는 <strong>영상 통화</strong> 페이지에서 토큰 입력 후 연결</li>
+        <li>두 개의 브라우저 창/기기에서 동시에 매칭 시작</li>
+      </ol>
+      
+      <h4 style="margin-top: 20px;">🌐 ngrok 사용 시</h4>
+      <p>다른 기기에서 테스트하려면 ngrok URL을 사용하세요:</p>
+      <ul>
+        <li>ngrok 실행: <code>.\ngrok.exe http 3000</code></li>
+        <li>공개된 URL로 접속 (예: <code>https://abc123.ngrok.io</code>)</li>
+        <li>이 페이지가 자동으로 표시됩니다</li>
+      </ul>
+    </div>
+  </div>
+</body>
+

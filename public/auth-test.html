@@ -1,0 +1,240 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>JWT 토큰 발급 테스트</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+  .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+  input, button { padding: 10px; margin: 5px; }
+  input[type="text"], input[type="email"], input[type="password"] { width: 300px; }
+  button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  button:hover { background: #0056b3; }
+  .result { margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px; word-break: break-all; }
+  .success { background: #d4edda; border: 1px solid #c3e6cb; }
+  .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+  .token-display { margin-top: 10px; padding: 10px; background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px; }
+  .token-display code { display: block; word-break: break-all; font-size: 12px; }
+  .copy-btn { background: #28a745; font-size: 12px; padding: 5px 10px; }
+  .copy-btn:hover { background: #218838; }
+</style>
+<body>
+  <h1>JWT 토큰 발급 테스트</h1>
+  
+  <!-- 회원가입 -->
+  <div class="section">
+    <h2>1. 회원가입</h2>
+    <div>
+      <input type="email" id="signupEmail" placeholder="이메일" />
+      <input type="text" id="signupName" placeholder="이름" />
+      <input type="text" id="signupUsername" placeholder="사용자명" />
+      <input type="password" id="signupPassword" placeholder="비밀번호" />
+      <button onclick="signUp()">회원가입</button>
+    </div>
+    <div id="signupResult" class="result" style="display:none;"></div>
+  </div>
+
+  <!-- 로그인 -->
+  <div class="section">
+    <h2>2. 로그인 (토큰 발급)</h2>
+    <div>
+      <input type="email" id="signinEmail" placeholder="이메일" />
+      <input type="password" id="signinPassword" placeholder="비밀번호" />
+      <button onclick="signIn()">로그인</button>
+    </div>
+    <div id="signinResult" class="result" style="display:none;"></div>
+    <div id="tokenDisplay" class="token-display" style="display:none;">
+      <h3>발급된 토큰:</h3>
+      <div>
+        <strong>Access Token:</strong>
+        <code id="accessToken"></code>
+        <button class="copy-btn" onclick="copyToken('accessToken')">복사</button>
+      </div>
+      <div style="margin-top: 10px;">
+        <strong>Refresh Token:</strong>
+        <code id="refreshToken"></code>
+        <button class="copy-btn" onclick="copyToken('refreshToken')">복사</button>
+      </div>
+      <div style="margin-top: 10px;">
+        <button onclick="copyAccessToken()">Access Token만 복사 (테스트용)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토큰 갱신 -->
+  <div class="section">
+    <h2>3. 토큰 갱신</h2>
+    <div>
+      <input type="text" id="refreshTokenInput" placeholder="Refresh Token" style="width: 500px;" />
+      <button onclick="refreshToken()">토큰 갱신</button>
+    </div>
+    <div id="refreshResult" class="result" style="display:none;"></div>
+  </div>
+
+<script>
+// 현재 접속한 URL 자동 감지 (ngrok URL도 자동으로 사용)
+const API_BASE = `${window.location.origin}/v1/api`;
+
+// 회원가입
+async function signUp() {
+  const email = document.getElementById('signupEmail').value;
+  const name = document.getElementById('signupName').value;
+  const username = document.getElementById('signupUsername').value;
+  const password = document.getElementById('signupPassword').value;
+
+  if (!email || !name || !username || !password) {
+    alert('모든 필드를 입력하세요');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name, username, password })
+    });
+
+    const data = await res.json();
+    const resultEl = document.getElementById('signupResult');
+    resultEl.style.display = 'block';
+
+    if (data.resultType === 'SUCCESS') {
+      resultEl.className = 'result success';
+      resultEl.innerHTML = `<strong>회원가입 성공!</strong><br>사용자 ID: ${data.success.userId}<br>이제 로그인하세요.`;
+      // 로그인 폼에 자동 입력
+      document.getElementById('signinEmail').value = email;
+      document.getElementById('signinPassword').value = password;
+    } else {
+      resultEl.className = 'result error';
+      resultEl.innerHTML = `<strong>회원가입 실패:</strong><br>${data.error?.reason || '알 수 없는 오류'}`;
+    }
+  } catch (err) {
+    const resultEl = document.getElementById('signupResult');
+    resultEl.style.display = 'block';
+    resultEl.className = 'result error';
+    resultEl.innerHTML = `<strong>오류:</strong><br>${err.message}`;
+  }
+}
+
+// 로그인
+async function signIn() {
+  const email = document.getElementById('signinEmail').value;
+  const password = document.getElementById('signinPassword').value;
+
+  if (!email || !password) {
+    alert('이메일과 비밀번호를 입력하세요');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/signin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+    const resultEl = document.getElementById('signinResult');
+    resultEl.style.display = 'block';
+
+    if (data.resultType === 'SUCCESS') {
+      resultEl.className = 'result success';
+      resultEl.innerHTML = `<strong>로그인 성공!</strong><br>사용자 ID: ${data.success.userId}`;
+      
+      // 토큰 표시
+      const tokenDisplay = document.getElementById('tokenDisplay');
+      tokenDisplay.style.display = 'block';
+      document.getElementById('accessToken').textContent = data.success.accessToken;
+      document.getElementById('refreshToken').textContent = data.success.refreshToken;
+      
+      // Refresh Token 입력란에 자동 입력
+      document.getElementById('refreshTokenInput').value = data.success.refreshToken;
+      
+      // 로컬 스토리지에 저장 (선택사항)
+      localStorage.setItem('accessToken', data.success.accessToken);
+      localStorage.setItem('refreshToken', data.success.refreshToken);
+    } else {
+      resultEl.className = 'result error';
+      resultEl.innerHTML = `<strong>로그인 실패:</strong><br>${data.error?.reason || '알 수 없는 오류'}`;
+    }
+  } catch (err) {
+    const resultEl = document.getElementById('signinResult');
+    resultEl.style.display = 'block';
+    resultEl.className = 'result error';
+    resultEl.innerHTML = `<strong>오류:</strong><br>${err.message}`;
+  }
+}
+
+// 토큰 갱신
+async function refreshToken() {
+  const refreshToken = document.getElementById('refreshTokenInput').value;
+
+  if (!refreshToken) {
+    alert('Refresh Token을 입력하세요');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    });
+
+    const data = await res.json();
+    const resultEl = document.getElementById('refreshResult');
+    resultEl.style.display = 'block';
+
+    if (data.resultType === 'SUCCESS') {
+      resultEl.className = 'result success';
+      resultEl.innerHTML = `<strong>토큰 갱신 성공!</strong>`;
+      
+      // 새 토큰 표시
+      const tokenDisplay = document.getElementById('tokenDisplay');
+      tokenDisplay.style.display = 'block';
+      document.getElementById('accessToken').textContent = data.success.accessToken;
+      document.getElementById('refreshToken').textContent = data.success.refreshToken;
+      document.getElementById('refreshTokenInput').value = data.success.refreshToken;
+    } else {
+      resultEl.className = 'result error';
+      resultEl.innerHTML = `<strong>토큰 갱신 실패:</strong><br>${data.error?.reason || '알 수 없는 오류'}`;
+    }
+  } catch (err) {
+    const resultEl = document.getElementById('refreshResult');
+    resultEl.style.display = 'block';
+    resultEl.className = 'result error';
+    resultEl.innerHTML = `<strong>오류:</strong><br>${err.message}`;
+  }
+}
+
+// 토큰 복사
+function copyToken(tokenId) {
+  const token = document.getElementById(tokenId).textContent;
+  navigator.clipboard.writeText(token).then(() => {
+    alert('토큰이 클립보드에 복사되었습니다!');
+  }).catch(err => {
+    alert('복사 실패: ' + err.message);
+  });
+}
+
+// Access Token만 복사 (테스트 페이지용)
+function copyAccessToken() {
+  const token = document.getElementById('accessToken').textContent;
+  navigator.clipboard.writeText(token).then(() => {
+    alert('Access Token이 클립보드에 복사되었습니다!\n이제 video-test.html에서 사용할 수 있습니다.');
+  }).catch(err => {
+    alert('복사 실패: ' + err.message);
+  });
+}
+
+// 페이지 로드 시 저장된 토큰 확인
+window.onload = () => {
+  const savedToken = localStorage.getItem('accessToken');
+  if (savedToken) {
+    const tokenDisplay = document.getElementById('tokenDisplay');
+    tokenDisplay.style.display = 'block';
+    document.getElementById('accessToken').textContent = savedToken;
+    document.getElementById('refreshToken').textContent = localStorage.getItem('refreshToken') || '';
+  }
+};
+</script>
+</body>
+

@@ -8,7 +8,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
     "dev": "nodemon -e js,json,prisma --exec \"prisma generate && node src/index.js\"",
-    "migrate": "prisma migrate dev --name init"
+    "migrate": "prisma migrate dev --name init",
+    "dep:graph": "depcruise --output-type mermaid --include-only \"^src\" -- src > dependency-graph.mmd",
+    "dep:graph:html": "depcruise --output-type mermaid --include-only \"^src\" -- src"
   },
   "author": "",
   "license": "ISC",
@@ -35,6 +37,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "dependency-cruiser": "^16.1.3"
   }
 }
