@@ -15,6 +15,9 @@ export const openaiModels = Object.freeze({
 });
 
 export const openaiClient = async (model, messages) => {
+  if (!ai) {
+    throw new Error("OpenAI API is not configured. Please set OPENAI_API_KEY environment variable.");
+  }
   try {
     const response = await ai.chat.completions.create({
       model: model,

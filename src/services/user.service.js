@@ -1,5 +1,6 @@
 import { responseFromUser } from "../dtos/user.dto.js";
 import { getUser } from "../repositories/user.repository.js";
+import { InvalidRequestError } from "../errors/auth.error.js";
 
 export const userProfile = async (userId) => {
   const user = await getUser(userId);
