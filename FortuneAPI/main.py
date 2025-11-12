@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Literal, Optional, Dict, Any
+from gemini_service import recommend_topics
 import os
 
 # Optional heavy deps (TensorFlow, pandas, etc.)
@@ -196,3 +197,11 @@ def compatibility(payload: dict) -> CompatibilityResult:
     return mock_compatibility(f1, f2)
 
 
+@app.post("/saju/recommend")
+async def recommend_saju_topics(analysis_result: dict = Body(...)):
+    """사주 기반 대화 주제 추천"""
+    try:
+        topics = recommend_topics(analysis_result)
+        return {"status": "success", "topics": topics}
+    except Exception as e:
+        return {"status": "error", "message": str(e), "topics": []}

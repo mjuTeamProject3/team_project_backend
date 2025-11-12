@@ -6,6 +6,7 @@ import {
 import {
   calculateUserFortune,
   checkUserCompatibility,
+  getSajuTopics,
 } from "../services/fortune.service.js";
 import { InvalidRequestError } from "../errors/auth.error.js";
 
@@ -236,6 +237,108 @@ export const handleCompatibility = async (req, res, next) => {
     }
     const compatibility = await checkUserCompatibility(user1, user2);
     res.status(StatusCodes.OK).success(compatibility);
+  } catch (err) {
+    return next(err);
+  }
+};
+
+/**
+ * 사주 기반 대화 주제 추천 컨트롤러
+ */
+export const handleRecommendTopics = async (req, res, next) => {
+  /*
+    #swagger.tags = ['Fortune']
+    #swagger.summary = '사주 기반 대화 주제 추천'
+    #swagger.description = '궁합 분석 결과를 바탕으로 대화 주제를 추천합니다.'
+    #swagger.security = []
+    #swagger.requestBody = {
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              score: { type: 'number', example: 78 },
+              level: { type: 'string', example: 'high' },
+              analysis: {
+                type: 'object',
+                properties: {
+                  overall: { type: 'string', example: '좋은 궁합입니다' },
+                  strengths: { type: 'array', items: { type: 'string' } },
+                  weaknesses: { type: 'array', items: { type: 'string' } },
+                  advice: { type: 'string', example: '소통을 통해 극복하세요' }
+                }
+              },
+              details: {
+                type: 'object',
+                properties: {
+                  heavenlyStems: { type: 'number', example: 70 },
+                  earthlyBranches: { type: 'number', example: 80 },
+                  fiveElements: { type: 'number', example: 75 },
+                  zodiacSign: { type: 'number', example: 85 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    #swagger.responses[200] = {
+      description: '대화 주제 추천 성공',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              resultType: { type: 'string', example: 'SUCCESS' },
+              error: { type: 'object', example: null },
+              success: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    topic: { type: 'string', example: '여행 계획' },
+                    reason: { type: 'string', example: '두 사람의 오행이 상생 관계여서...' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    #swagger.responses[400] = {
+      description: '잘못된 요청',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              resultType: { type: 'string', example: 'FAIL' },
+              error: {
+                type: 'object',
+                properties: {
+                  errorCode: { type: 'string', example: 'invalid_request' },
+                  reason: { type: 'string', example: '대화 주제 추천에 실패했습니다.' },
+                  data: { type: 'object', example: null }
+                }
+              },
+              success: { type: 'object', example: null }
+            }
+          }
+        }
+      }
+    }
+  */
+  try {
+    const analysisResult = req.body;
+    if (!analysisResult) {
+      throw new InvalidRequestError("분석 결과가 필요합니다.");
+    }
+    const topics = await getSajuTopics(analysisResult);
+    res.status(StatusCodes.OK).success(topics);
   } catch (err) {
     return next(err);
   }
