@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
-import { userProfile } from "../services/user.service.js";
+import { otherUserProfile, userProfile } from "../services/user.service.js";
+import { likeUser, unlikeUser } from "../services/like.service.js";
 
 export const handleUserProfile = async (req, res, next) => {
   /*
@@ -130,6 +131,33 @@ export const handleUserProfile = async (req, res, next) => {
   try {
     const user = await userProfile(req.user.userId);
     res.status(StatusCodes.OK).success(user);
+  } catch (err) {
+    return next(err);
+  }
+};
+
+export const handleUserProfileById = async (req, res, next) => {
+  try {
+    const user = await otherUserProfile({ targetUserId: Number(req.params.id) });
+    res.status(StatusCodes.OK).success(user);
+  } catch (err) {
+    return next(err);
+  }
+};
+
+export const handleLikeUser = async (req, res, next) => {
+  try {
+    await likeUser({ fromUserId: req.user.userId, toUserId: Number(req.params.id) });
+    res.status(StatusCodes.OK).success({});
+  } catch (err) {
+    return next(err);
+  }
+};
+
+export const handleUnlikeUser = async (req, res, next) => {
+  try {
+    await unlikeUser({ fromUserId: req.user.userId, toUserId: Number(req.params.id) });
+    res.status(StatusCodes.OK).success({});
   } catch (err) {
     return next(err);
   }

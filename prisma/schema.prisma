@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -12,11 +13,82 @@ model User {
   email        String   @unique(map: "email") @db.VarChar(255)
   name         String   @db.VarChar(255)
   username     String   @unique @db.VarChar(255)
-  password     String   @db.VarChar(255)
+  password     String?  @db.VarChar(255)
+  provider     String?  @db.VarChar(50) // 'google', 'kakao', 'naver', null
+  socialId     String?  @db.VarChar(255) // 소셜 로그인 제공자의 사용자 ID
   avatar       String?  @db.VarChar(255)
+  location     String?  @db.VarChar(255)
+  gender       String?  @db.VarChar(20)
+  birthdate    DateTime? @db.Date
+  sajuKeywords Json?
   refreshToken String?  @db.VarChar(500)
   createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(6)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime(6)
 
+  // relations
+  likesGiven    Like[]       @relation("LikesFrom")
+  likesReceived Like[]       @relation("LikesTo")
+  friendsAsOne  Friendship[] @relation("UserOneFriends")
+  friendsAsTwo  Friendship[] @relation("UserTwoFriends")
+  notifications Notification[]
+  messagesSent  Message[]    @relation("FromUser")
+  messagesReceived Message[]  @relation("ToUser")
+
   @@map("user")
+}
+
+model Like {
+  id         Int      @id @default(autoincrement())
+  fromUser   User     @relation("LikesFrom", fields: [fromUserId], references: [id])
+  fromUserId Int
+  toUser     User     @relation("LikesTo", fields: [toUserId], references: [id])
+  toUserId   Int
+  createdAt  DateTime @default(now()) @db.DateTime(6)
+
+  @@unique([fromUserId, toUserId])
+  @@map("like")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Friendship {
+  id         Int               @id @default(autoincrement())
+  userOne    User              @relation("UserOneFriends", fields: [userOneId], references: [id])
+  userOneId  Int
+  userTwo    User              @relation("UserTwoFriends", fields: [userTwoId], references: [id])
+  userTwoId  Int
+  status     FriendshipStatus  @default(PENDING)
+  createdAt  DateTime          @default(now()) @db.DateTime(6)
+  updatedAt  DateTime          @default(now()) @updatedAt @db.DateTime(6)
+
+  @@unique([userOneId, userTwoId])
+  @@map("friendship")
+}
+
+model Notification {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  type       String    // 'friend_request', 'like', 'message', 'system'
+  content    String?   // json or message
+  refId      Int?      // Related entity (optional)
+  isRead     Boolean   @default(false)
+  processed  Boolean?  @default(false) // 친구요청 처리 알림만 사용
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id])
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  fromUserId Int
+  toUserId   Int
+  text       String
+  imageUrl   String?
+  createdAt  DateTime @default(now())
+  fromUser   User     @relation("FromUser", fields: [fromUserId], references: [id])
+  toUser     User     @relation("ToUser", fields: [toUserId], references: [id])
 }

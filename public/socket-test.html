@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>랜덤채팅 테스트</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<body>
+  <div>
+    <input id="token" placeholder="JWT 토큰" style="width: 600px;">
+    <button id="connect">연결</button>
+    <button id="join">대기열 참여</button>
+    <button id="end">종료(X)</button>
+    <button id="report">신고(깃발)</button>
+    <button id="topics">전구(주제)</button>
+  </div>
+  <div>
+    <input id="text" placeholder="메시지" style="width: 500px;">
+    <button id="send">보내기</button>
+  </div>
+  <div id="reportBox" style="display:none;margin-top:8px;border:1px solid #ddd;padding:8px;width:720px;background:#fafafa">
+    <div style="margin-bottom:6px;font-weight:bold">신고 작성</div>
+    <div style="margin-bottom:6px">
+      <input id="reason" placeholder="신고 사유" style="width:620px;">
+      <button id="reportSubmit">신고 제출</button>
+      <button id="reportCancel">취소</button>
+    </div>
+    <small>신고 사유를 입력해야 신고가 접수됩니다. 상대 닉네임은 자동 포함됩니다.</small>
+  </div>
+  <pre id="log" style="height:300px;overflow:auto;border:1px solid #ccc;"></pre>
+<script>
+let socket, roomId, partnerId;
+const log = (m)=>{ const el=document.getElementById('log'); el.textContent += m+"\n"; el.scrollTop=el.scrollHeight; };
+
+// 현재 접속한 URL 자동 감지 (ngrok URL도 자동으로 사용)
+const SERVER_URL = window.location.origin;
+
+document.getElementById('connect').onclick = ()=>{
+  const token = document.getElementById('token').value.trim();
+  socket = io(SERVER_URL, { auth: { token } });
+
+  socket.on("connect", ()=>log("connected: "+socket.id));
+  socket.on("connect_error", (err)=>log("connect_error: "+(err?.message||err)));
+  socket.on("error", (err)=>log("error: "+(err?.message||err)));
+  socket.on("disconnect", (reason)=>log("disconnect: "+reason));
+  socket.on("queue:waiting", ({position})=>log("waiting... pos="+position));
+  socket.on("match:found", (p)=>{
+    roomId = p.roomId; partnerId = p.partnerId;
+    log("matched! room="+roomId+" partner="+partnerId+" score="+(p.compatibility?.score??'n/a'));
+  });
+  socket.on("message:new", (m)=>log("msg["+m.userId+"]: "+m.text));
+  socket.on("chat:ended", ({reason})=>{ log("ended: "+reason); roomId = undefined; partnerId = undefined; });
+  socket.on("topics:list", ({topics})=>log("topics: "+JSON.stringify(topics)));
+  socket.on("topics:already", (m)=>log("topics:already: "+(m?.message||"이미 추천됨")));
+  socket.on("user:reported", (r)=>{
+    if (r?.ok) { log("reported!"); }
+    else { log("report failed: "+(r?.error||"unknown")); }
+  });
+};
+
+document.getElementById('join').onclick = ()=> socket.emit("queue:join");
+document.getElementById('send').onclick = ()=>{
+  const t = document.getElementById('text').value;
+  socket.emit("message:send", { roomId, text: t });
+};
+document.getElementById('end').onclick = ()=> {
+  log('end clicked');
+  socket.emit("chat:end", { reason:'manual' }, (ack)=>{
+    log('end ack: '+JSON.stringify(ack));
+  });
+};
+document.getElementById('report').onclick = ()=> {
+  document.getElementById('reportBox').style.display = 'block';
+};
+document.getElementById('reportCancel').onclick = ()=>{
+  document.getElementById('reportBox').style.display = 'none';
+};
+document.getElementById('reportSubmit').onclick = ()=>{
+  const reason = document.getElementById('reason').value.trim();
+  if (!reason) { log('report: 사유를 입력하세요'); return; }
+  socket.emit("user:report", { roomId, reason });
+  document.getElementById('reportBox').style.display = 'none';
+  document.getElementById('reason').value = '';
+};
+document.getElementById('topics').onclick = ()=> socket.emit("topics:suggest", { roomId, context:'가벼운 아이스브레이킹' });
+</script>
+</body>
+
+

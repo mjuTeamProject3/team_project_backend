@@ -1,0 +1,64 @@
+[
+  {
+    "id": "r_1761828853107_muoyd6",
+    "reporterUserId": 1,
+    "targetUserId": 2,
+    "roomId": "room_1_2",
+    "reason": "테스트 신고",
+    "createdAt": "2025-10-30T12:54:13.107Z"
+  },
+  {
+    "id": "r_1761830104259_5g2swj",
+    "reporterUserId": 1,
+    "reporterName": "asd",
+    "targetUserId": 2,
+    "roomId": "room_1_2",
+    "reason": "asd",
+    "createdAt": "2025-10-30T13:15:04.259Z"
+  },
+  {
+    "id": "r_1761830475643_x0xnsv",
+    "reporterUserId": 1,
+    "targetUserId": 2,
+    "targetUsername": "tester1",
+    "roomId": "room_1_2",
+    "reason": "ㅁㄴㅇㅁㄴ",
+    "createdAt": "2025-10-30T13:21:15.643Z"
+  },
+  {
+    "id": "r_1761830837706_iut06u",
+    "reporterUserId": 1,
+    "targetUserId": 2,
+    "targetUsername": "tester1",
+    "roomId": "room_1_2",
+    "reason": "ㅁ",
+    "createdAt": "2025-10-30T13:27:17.706Z"
+  },
+  {
+    "id": "r_1761831309894_g0e5m7",
+    "reporterUserId": 2,
+    "targetUserId": 1,
+    "targetUsername": "username",
+    "roomId": "room_1_2",
+    "reason": "s",
+    "createdAt": "2025-10-30T13:35:09.894Z"
+  },
+  {
+    "id": "r_1761831599533_v0ma3j",
+    "reporterUserId": 2,
+    "targetUserId": 1,
+    "targetUsername": "username",
+    "roomId": "room_1_2",
+    "reason": "hello",
+    "createdAt": "2025-10-30T13:39:59.533Z"
+  },
+  {
+    "id": "r_1762945841948_ukqdvy",
+    "reporterUserId": 9,
+    "targetUserId": 10,
+    "targetUsername": "강민",
+    "roomId": "room_10_9",
+    "reason": "강민석 ㅈ같네요",
+    "createdAt": "2025-11-12T11:10:41.948Z"
+  }
+]

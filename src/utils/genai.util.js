@@ -18,6 +18,10 @@ export const genaiClient = async (model, contents) => {
     throw new Error("Google GenAI API is not configured. Please set GOOGLE_API_KEY environment variable.");
   }
   try {
+    if (!ai) {
+      // Gemini not configured; return null to allow graceful fallback
+      return null;
+    }
     const response = await ai.models.generateContent({
       model: model,
       contents: contents,
@@ -25,6 +29,6 @@ export const genaiClient = async (model, contents) => {
     return response;
   } catch (error) {
     console.error("Error generating content:", error);
-    throw error;
+    return null;
   }
 };
