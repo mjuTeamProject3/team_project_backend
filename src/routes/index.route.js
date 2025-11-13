@@ -7,6 +7,7 @@ import notificationRoute from "./notification.route.js";
 import messageRoute from "./message.route.js";
 import rankingRoute from "./ranking.route.js";
 import uploadRoute from "./upload.route.js";
+import fortuneRoute from "./fortune.route.js";
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.use("/notification", notificationRoute);
 router.use("/message", messageRoute);
 router.use("/ranking", rankingRoute);
 router.use("/upload", uploadRoute);
+router.use("/fortune", fortuneRoute);
 
 export default router;

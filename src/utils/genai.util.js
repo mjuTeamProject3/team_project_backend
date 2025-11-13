@@ -14,6 +14,9 @@ export const genaiModels = Object.freeze({
 });
 
 export const genaiClient = async (model, contents) => {
+  if (!ai) {
+    throw new Error("Google GenAI API is not configured. Please set GOOGLE_API_KEY environment variable.");
+  }
   try {
     if (!ai) {
       // Gemini not configured; return null to allow graceful fallback
