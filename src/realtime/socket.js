@@ -1,7 +1,7 @@
 import { Server } from "socket.io";
 import { verifyJwt } from "../utils/jwt.util.js";
 import { getCompatibilityScore } from "../services/saju.service.js";
-import { suggestTopics } from "../services/topic.service.js";
+import { getSajuTopics } from "../services/fortune.service.js";
 import { saveReport } from "../services/report.service.js";
 import { prisma } from "../configs/db.config.js";
 
@@ -102,6 +102,13 @@ export const initSocket = (httpServer, { corsOptions }) => {
           bUser = await prisma.user.findUnique({ where: { id: b }, select: { username: true } });
         } catch {}
 
+        // rooms에 전체 궁합 분석 결과 저장 (대화 주제 추천에 사용)
+        const roomData = rooms.get(roomId);
+        if (roomData && saju.fullAnalysis) {
+          roomData.fullAnalysis = saju.fullAnalysis;
+          rooms.set(roomId, roomData);
+        }
+
         const sa = userIdToSocket.get(a);
         const sb = userIdToSocket.get(b);
         sa?.join(roomId);
@@ -194,9 +201,25 @@ export const initSocket = (httpServer, { corsOptions }) => {
         if (!pair) { for (const [r, p] of rooms) { if (p.a === userId || p.b === userId) { pair = p; rid = r; break; } } }
         if (!pair) return;
         if (pair.topicsSuggested) { socket.emit("topics:already", { message: "이미 대화 주제를 추천했습니다." }); return; }
-        const partnerId = pair.a === userId ? pair.b : pair.a;
-        const topics = await suggestTopics({ userId, partnerUserId: partnerId, context });
-        pair.topicsSuggested = true; rooms.set(rid, pair);
+        
+        // FortuneAPI를 사용한 대화 주제 추천
+        let topics = [];
+        if (pair.fullAnalysis) {
+          // 궁합 분석 결과가 있으면 FortuneAPI 사용
+          try {
+            topics = await getSajuTopics(pair.fullAnalysis);
+            console.log(`[topics] FortuneAPI 추천: ${topics.length}개 주제`);
+          } catch (e) {
+            console.error("[topics] FortuneAPI error:", e?.message || e);
+            // FortuneAPI 실패 시 빈 배열 반환
+            topics = [];
+          }
+        } else {
+          console.warn(`[topics] No fullAnalysis for room=${rid}`);
+        }
+        
+        pair.topicsSuggested = true; 
+        rooms.set(rid, pair);
         io.to(rid).emit("topics:list", { topics });
       } catch (e) {
         console.error("topics:suggest error", e?.message || e);

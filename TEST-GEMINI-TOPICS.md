@@ -56,17 +56,15 @@ $body = @{
         year = 1998
         month = 2
         day = 1
-        hour = 14
-        minute = 30
         isLunar = $false
+        gender = "female"
     }
     user2 = @{
         year = 1995
         month = 7
         day = 15
-        hour = 9
-        minute = 0
         isLunar = $false
+        gender = "male"
     }
 } | ConvertTo-Json -Depth 3
 
@@ -212,17 +210,15 @@ $compatibilityBody = @{
         year = 1998
         month = 2
         day = 1
-        hour = 14
-        minute = 30
         isLunar = $false
+        gender = "female"
     }
     user2 = @{
         year = 1995
         month = 7
         day = 15
-        hour = 9
-        minute = 0
         isLunar = $false
+        gender = "male"
     }
 } | ConvertTo-Json -Depth 3
 

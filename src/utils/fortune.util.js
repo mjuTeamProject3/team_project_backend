@@ -11,13 +11,12 @@ const fortuneApiClient = axios.create({
 
 /**
  * 사주 계산 API 호출
- * @param {Object} birthInfo - 생년월일시 정보
+ * @param {Object} birthInfo - 생년월일 및 성별 정보
  * @param {number} birthInfo.year - 연도
  * @param {number} birthInfo.month - 월
  * @param {number} birthInfo.day - 일
- * @param {number} birthInfo.hour - 시
- * @param {number} birthInfo.minute - 분
  * @param {boolean} birthInfo.isLunar - 음력 여부
+ * @param {string} birthInfo.gender - 성별 (male|female)
  * @returns {Promise<Object>} 사주 정보
  */
 export const calculateFortune = async (birthInfo) => {

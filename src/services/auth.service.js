@@ -98,7 +98,7 @@ export const refresh = async (data) => {
   });
 };
 
-// 소셜 로그인
+// 소셜 로그인 (사용자만 찾기/생성, 토큰 발급 안 함)
 export const socialLogin = async (socialUser) => {
   const user = await findOrCreateSocialUser({
     provider: socialUser.provider,
@@ -108,20 +108,26 @@ export const socialLogin = async (socialUser) => {
     avatar: socialUser.avatar,
   });
 
-  const accessToken = createJwt({ userId: user.id, type: "AT" });
-  const refreshToken = createJwt({ userId: user.id, type: "RT" });
+  // 토큰 발급하지 않고 사용자 정보만 반환
+  return user;
+};
 
-  const updateUser = await updateUserRefresh(user.id, refreshToken);
+// 프로필 완성 후 토큰 발급
+export const issueTokens = async (userId) => {
+  const accessToken = createJwt({ userId, type: "AT" });
+  const refreshToken = createJwt({ userId, type: "RT" });
+
+  const updateUser = await updateUserRefresh(userId, refreshToken);
   if (!updateUser) {
-    throw new InvalidRequestError("로그인에 실패했습니다.");
+    throw new InvalidRequestError("토큰 발급에 실패했습니다.");
   }
 
   const auth = {
-    id: user.id,
+    id: userId,
     accessToken: accessToken,
     refreshToken: refreshToken,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
+    createdAt: updateUser.createdAt,
+    updatedAt: updateUser.updatedAt,
   };
 
   return responseFromAuth({

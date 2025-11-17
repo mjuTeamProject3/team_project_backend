@@ -17,7 +17,7 @@ export const handleCalculateFortune = async (req, res, next) => {
   /*
     #swagger.tags = ['Fortune']
     #swagger.summary = '사주 계산'
-    #swagger.description = '생년월일시 정보를 바탕으로 사주를 계산합니다.'
+    #swagger.description = '생년월일과 성별 정보를 바탕으로 사주를 계산합니다.'
     #swagger.security = []
     #swagger.requestBody = {
       required: true,
@@ -29,11 +29,10 @@ export const handleCalculateFortune = async (req, res, next) => {
               year: { type: 'number', example: 1998 },
               month: { type: 'number', example: 2 },
               day: { type: 'number', example: 1 },
-              hour: { type: 'number', example: 14 },
-              minute: { type: 'number', example: 30 },
-              isLunar: { type: 'boolean', example: false }
+              isLunar: { type: 'boolean', example: false },
+              gender: { type: 'string', example: 'female' }
             },
-            required: ['year', 'month', 'day', 'hour']
+            required: ['year', 'month', 'day', 'gender']
           }
         }
       }
@@ -56,8 +55,7 @@ export const handleCalculateFortune = async (req, res, next) => {
                     properties: {
                       year: { type: 'string', example: '甲' },
                       month: { type: 'string', example: '乙' },
-                      day: { type: 'string', example: '丙' },
-                      hour: { type: 'string', example: '丁' }
+                      day: { type: 'string', example: '丙' }
                     }
                   },
                   earthlyBranches: {
@@ -65,8 +63,7 @@ export const handleCalculateFortune = async (req, res, next) => {
                     properties: {
                       year: { type: 'string', example: '子' },
                       month: { type: 'string', example: '丑' },
-                      day: { type: 'string', example: '寅' },
-                      hour: { type: 'string', example: '卯' }
+                      day: { type: 'string', example: '寅' }
                     }
                   },
                   fiveElements: {
@@ -74,8 +71,7 @@ export const handleCalculateFortune = async (req, res, next) => {
                     properties: {
                       year: { type: 'string', example: '木' },
                       month: { type: 'string', example: '木' },
-                      day: { type: 'string', example: '火' },
-                      hour: { type: 'string', example: '火' }
+                      day: { type: 'string', example: '火' }
                     }
                   },
                   zodiacSign: { type: 'string', example: '子' },
@@ -127,7 +123,7 @@ export const handleCompatibility = async (req, res, next) => {
   /*
     #swagger.tags = ['Fortune']
     #swagger.summary = '궁합 분석'
-    #swagger.description = '두 사용자의 생년월일시 정보를 바탕으로 궁합을 분석합니다.'
+    #swagger.description = '두 사용자의 생년월일과 성별 정보를 바탕으로 궁합을 분석합니다.'
     #swagger.security = []
     #swagger.requestBody = {
       required: true,
@@ -142,11 +138,10 @@ export const handleCompatibility = async (req, res, next) => {
                   year: { type: 'number', example: 1998 },
                   month: { type: 'number', example: 2 },
                   day: { type: 'number', example: 1 },
-                  hour: { type: 'number', example: 14 },
-                  minute: { type: 'number', example: 30 },
-                  isLunar: { type: 'boolean', example: false }
+              isLunar: { type: 'boolean', example: false },
+              gender: { type: 'string', example: 'female' }
                 },
-                required: ['year', 'month', 'day', 'hour']
+            required: ['year', 'month', 'day', 'gender']
               },
               user2: {
                 type: 'object',
@@ -154,11 +149,10 @@ export const handleCompatibility = async (req, res, next) => {
                   year: { type: 'number', example: 1995 },
                   month: { type: 'number', example: 7 },
                   day: { type: 'number', example: 15 },
-                  hour: { type: 'number', example: 9 },
-                  minute: { type: 'number', example: 0 },
-                  isLunar: { type: 'boolean', example: false }
+              isLunar: { type: 'boolean', example: false },
+              gender: { type: 'string', example: 'male' }
                 },
-                required: ['year', 'month', 'day', 'hour']
+            required: ['year', 'month', 'day', 'gender']
               }
             },
             required: ['user1', 'user2']

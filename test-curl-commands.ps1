@@ -9,9 +9,8 @@ $body = @{
     year = 1998
     month = 2
     day = 1
-    hour = 14
-    minute = 30
     isLunar = $false
+    gender = "female"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "http://localhost:3000/v1/api/fortune/calculate" `
@@ -25,17 +24,15 @@ $body = @{
         year = 1998
         month = 2
         day = 1
-        hour = 14
-        minute = 30
         isLunar = $false
+        gender = "female"
     }
     user2 = @{
         year = 1995
         month = 7
         day = 15
-        hour = 9
-        minute = 0
         isLunar = $false
+        gender = "male"
     }
 } | ConvertTo-Json -Depth 3
 
@@ -49,15 +46,15 @@ Invoke-RestMethod -Uri "http://localhost:3000/v1/api/fortune/compatibility" `
 # ============================================
 
 # 1. 사주 계산 테스트 (한 줄)
-curl.exe -X POST http://localhost:3000/v1/api/fortune/calculate -H "Content-Type: application/json" -d "{\"year\":1998,\"month\":2,\"day\":1,\"hour\":14,\"minute\":30,\"isLunar\":false}"
+curl.exe -X POST http://localhost:3000/v1/api/fortune/calculate -H "Content-Type: application/json" -d "{\"year\":1998,\"month\":2,\"day\":1,\"isLunar\":false,\"gender\":\"female\"}"
 
 # 2. 사주 계산 테스트 (여러 줄)
 curl.exe -X POST http://localhost:3000/v1/api/fortune/calculate `
     -H "Content-Type: application/json" `
-    -d "{\"year\":1998,\"month\":2,\"day\":1,\"hour\":14,\"minute\":30,\"isLunar\":false}"
+    -d "{\"year\":1998,\"month\":2,\"day\":1,\"isLunar\":false,\"gender\":\"female\"}"
 
 # 3. 궁합 분석 테스트 (한 줄)
-curl.exe -X POST http://localhost:3000/v1/api/fortune/compatibility -H "Content-Type: application/json" -d "{\"user1\":{\"year\":1998,\"month\":2,\"day\":1,\"hour\":14,\"minute\":30,\"isLunar\":false},\"user2\":{\"year\":1995,\"month\":7,\"day\":15,\"hour\":9,\"minute\":0,\"isLunar\":false}}"
+curl.exe -X POST http://localhost:3000/v1/api/fortune/compatibility -H "Content-Type: application/json" -d "{\"user1\":{\"year\":1998,\"month\":2,\"day\":1,\"isLunar\":false,\"gender\":\"female\"},\"user2\":{\"year\":1995,\"month\":7,\"day\":15,\"isLunar\":false,\"gender\":\"male\"}}"
 
 # ============================================
 # 방법 3: 파일에서 JSON 읽기

@@ -28,7 +28,9 @@ source .venv/bin/activate
 pip install -r FortuneAPI/requirements.txt
 ```
 
-**참고**: 실제 .h5 모델을 로드하려면 `requirements.txt`에서 TensorFlow 주석을 해제하고 설치하세요. TensorFlow는 특정 Python 버전과 큰 용량이 필요할 수 있습니다.
+**참고**
+- `.h5` 모델을 사용하려면 `tensorflow`를 직접 설치해야 합니다.
+- 일간(일간지) 계산을 정확히 하려면 환경 변수 `KOREA_LUNAR_API_KEY`에 한국천문연구원 OpenAPI 키를 넣어주세요. 키가 없으면 내부 보정 알고리즘으로 근사합니다.
 
 ### 3. 서버 실행
 ```bash
@@ -52,9 +54,8 @@ curl http://localhost:8000/health
     "year": 1998,
     "month": 2,
     "day": 1,
-    "hour": 14,
-    "minute": 30,
-    "isLunar": false
+    "isLunar": false,
+    "gender": "female"
   }
 }
 ```
@@ -65,20 +66,17 @@ curl http://localhost:8000/health
   "heavenlyStems": {
     "year": "甲",
     "month": "乙", 
-    "day": "丙",
-    "hour": "丁"
+    "day": "丙"
   },
   "earthlyBranches": {
     "year": "子",
     "month": "丑",
-    "day": "寅", 
-    "hour": "卯"
+    "day": "寅"
   },
   "fiveElements": {
     "year": "木",
     "month": "木",
-    "day": "火",
-    "hour": "火"
+    "day": "火"
   },
   "zodiacSign": "子",
   "animalSign": "쥐"
@@ -93,22 +91,20 @@ curl http://localhost:8000/health
 {
   "user1": {
     "birthInfo": {
-      "year": 1998,
-      "month": 2,
-      "day": 1,
-      "hour": 14,
-      "minute": 30,
-      "isLunar": false
+      "year": 2003,
+      "month": 8,
+      "day": 16,
+      "isLunar": false,
+      "gender": "male"
     }
   },
   "user2": {
     "birthInfo": {
-      "year": 1995,
-      "month": 7,
-      "day": 15,
-      "hour": 9,
-      "minute": 0,
-      "isLunar": false
+      "year": 2003,
+      "month": 12,
+      "day": 4,
+      "isLunar": false,
+      "gender": "male"
     }
   }
 }
@@ -117,19 +113,27 @@ curl http://localhost:8000/health
 **응답:**
 ```json
 {
-  "score": 78,
+  "score": 74.5,
+  "finalScore": 74.5,
+  "originalScore": 82.1,
+  "stressScore": 33.8,
   "level": "high",
   "analysis": {
-    "overall": "좋은 궁합입니다",
-    "strengths": ["서로 보완", "안정적"],
-    "weaknesses": ["가끔 갈등"],
-    "advice": "소통을 통해 극복하세요"
+    "overall": "안정적인 호환성입니다. 대화를 자주 나눠보세요.",
+    "strengths": ["열정 · 에너지 · 예술 · 중독"],
+    "weaknesses": ["무난"],
+    "advice": "진짜 로직 연결 전 임시 메시지입니다."
   },
   "details": {
-    "heavenlyStems": 70,
-    "earthlyBranches": 80,
-    "fiveElements": 75,
-    "zodiacSign": 85
+    "skyYear": 51.2,
+    "skyDay": 80.3,
+    "earthYear": 65.5,
+    "earthMonth": 60.1,
+    "earthDay": 79.9
+  },
+  "traits": {
+    "user1": ["열정 · 에너지 · 예술 · 중독"],
+    "user2": ["무난"]
   }
 }
 ```

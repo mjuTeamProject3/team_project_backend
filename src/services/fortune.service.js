@@ -9,7 +9,7 @@ import fortuneConfig from "../configs/fortune.config.js";
 
 /**
  * 사주 계산 서비스
- * @param {Object} birthInfo - 생년월일시 정보
+ * @param {Object} birthInfo - 생년월일 및 성별 정보
  * @returns {Object} 사주 정보
  */
 export const calculateUserFortune = async (birthInfo) => {
@@ -25,8 +25,8 @@ export const calculateUserFortune = async (birthInfo) => {
 
 /**
  * 궁합 분석 서비스
- * @param {Object} user1 - 첫 번째 사용자 생년월일시 정보
- * @param {Object} user2 - 두 번째 사용자 생년월일시 정보
+ * @param {Object} user1 - 첫 번째 사용자 생년월일 및 성별 정보
+ * @param {Object} user2 - 두 번째 사용자 생년월일 및 성별 정보
  * @returns {Object} 궁합 분석 결과
  */
 export const checkUserCompatibility = async (user1, user2) => {

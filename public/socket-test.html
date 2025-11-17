@@ -4,7 +4,8 @@
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <body>
   <div>
-    <input id="token" placeholder="JWT 토큰" style="width: 600px;">
+    <input id="token" placeholder="JWT 토큰" style="width: 500px;">
+    <button id="loadToken">토큰 불러오기 (localStorage)</button>
     <button id="connect">연결</button>
     <button id="join">대기열 참여</button>
     <button id="end">종료(X)</button>
@@ -41,13 +42,35 @@ document.getElementById('connect').onclick = ()=>{
   socket.on("error", (err)=>log("error: "+(err?.message||err)));
   socket.on("disconnect", (reason)=>log("disconnect: "+reason));
   socket.on("queue:waiting", ({position})=>log("waiting... pos="+position));
-  socket.on("match:found", (p)=>{
-    roomId = p.roomId; partnerId = p.partnerId;
-    log("matched! room="+roomId+" partner="+partnerId+" score="+(p.compatibility?.score??'n/a'));
+  socket.on("match:found", (p)=>{ 
+    roomId = p.roomId; partnerId = p.partnerId; 
+    const compat = p.compatibility || {};
+    const finalScore = compat.finalScore ?? compat.score ?? 'n/a';
+    const originalScore = compat.originalScore ?? 'n/a';
+    const stressScore = compat.stressScore ?? 'n/a';
+    log("matched! room="+roomId+" partner="+partnerId);
+    log("  Final Score: " + finalScore);
+    log("  Original Score: " + originalScore);
+    log("  Stress Score: " + stressScore);
   });
   socket.on("message:new", (m)=>log("msg["+m.userId+"]: "+m.text));
   socket.on("chat:ended", ({reason})=>{ log("ended: "+reason); roomId = undefined; partnerId = undefined; });
-  socket.on("topics:list", ({topics})=>log("topics: "+JSON.stringify(topics)));
+  socket.on("topics:list", ({topics})=>{
+    if (topics && topics.length > 0) {
+      log("=== 대화 주제 추천 (FortuneAPI) ===");
+      topics.forEach((topic, idx) => {
+        if (typeof topic === 'string') {
+          log(`  ${idx + 1}. ${topic}`);
+        } else if (topic.topic) {
+          log(`  ${idx + 1}. ${topic.topic}${topic.reason ? ' - ' + topic.reason : ''}`);
+        } else {
+          log(`  ${idx + 1}. ${JSON.stringify(topic)}`);
+        }
+      });
+    } else {
+      log("대화 주제 추천: 주제가 없습니다.");
+    }
+  });
   socket.on("topics:already", (m)=>log("topics:already: "+(m?.message||"이미 추천됨")));
   socket.on("user:reported", (r)=>{
     if (r?.ok) { log("reported!"); }
@@ -80,6 +103,28 @@ document.getElementById('reportSubmit').onclick = ()=>{
   document.getElementById('reason').value = '';
 };
 document.getElementById('topics').onclick = ()=> socket.emit("topics:suggest", { roomId, context:'가벼운 아이스브레이킹' });
+
+// 토큰 불러오기 버튼
+document.getElementById('loadToken').onclick = ()=> {
+  const savedToken = localStorage.getItem('accessToken');
+  if (savedToken) {
+    document.getElementById('token').value = savedToken;
+    log('토큰을 localStorage에서 불러왔습니다.');
+  } else {
+    log('localStorage에 저장된 토큰이 없습니다. F12를 눌러 Application > Local Storage에서 확인하거나, auth-test.html에서 로그인하세요.');
+  }
+};
+
+// 페이지 로드 시 자동으로 토큰 불러오기
+window.onload = () => {
+  const savedToken = localStorage.getItem('accessToken');
+  if (savedToken) {
+    document.getElementById('token').value = savedToken;
+    log('자동으로 토큰을 불러왔습니다. (localStorage)');
+  } else {
+    log('💡 토큰 확인 방법:\n1. F12 > Application > Local Storage에서 accessToken 확인\n2. "토큰 불러오기" 버튼 클릭\n3. auth-test.html에서 로그인 후 토큰 복사');
+  }
+};
 </script>
 </body>
 

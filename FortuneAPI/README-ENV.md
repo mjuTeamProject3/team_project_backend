@@ -22,8 +22,9 @@ GOOGLE_API_KEY=your-api-key-here
 2. 다음 내용 입력:
    ```
    GOOGLE_API_KEY=your-api-key-here
+   KOREA_LUNAR_API_KEY=your-lunar-api-key
    ```
-3. `your-api-key-here`를 실제 Gemini API 키로 변경
+3. 각각 실제 키로 변경 (둘 다 선택 사항이지만, 없으면 Gemini 또는 일간 계산을 근사합니다)
 4. 저장
 
 ### 방법 3: 명령 프롬프트에서 생성

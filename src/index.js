@@ -46,6 +46,16 @@ app.get("/openapi.json", swaggerHandler);
 
 app.use("/v1/api/", apiRoute);
 
+// 소셜 로그인 콜백 페이지 라우트
+app.get("/auth/callback", (req, res) => {
+  res.sendFile("auth-callback.html", { root: "public" });
+});
+
+// 프로필 설정 페이지 라우트
+app.get("/auth/setup", (req, res) => {
+  res.sendFile("setup.html", { root: "public" });
+});
+
 app.use(errorHandler);
 
 // Initialize WebSocket server
