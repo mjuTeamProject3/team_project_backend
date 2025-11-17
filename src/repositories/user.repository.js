@@ -22,6 +22,14 @@ export const getUserWithCounts = async ({ targetUserId }) => {
   return { ...user, likesCount, friendsCount };
 };
 
+export const updateUser = async ({ userId, data }) => {
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: data,
+  });
+  return updated;
+};
+
 // 소셜 로그인 사용자 찾기 또는 생성
 export const findOrCreateSocialUser = async (data) => {
   // provider와 socialId로 먼저 찾기

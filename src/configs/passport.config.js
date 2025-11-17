@@ -90,5 +90,24 @@ if (process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET) {
   console.warn("⚠️  Naver OAuth 설정이 없습니다. NAVER_CLIENT_ID와 NAVER_CLIENT_SECRET을 확인하세요.");
 }
 
+// Passport 세션 직렬화 설정
+// 세션에 저장할 정보 (간단한 객체만 저장)
+passport.serializeUser((user, done) => {
+  // 사용자 정보를 간단한 객체로 변환하여 세션에 저장
+  done(null, {
+    provider: user.provider,
+    socialId: user.socialId,
+    email: user.email,
+    name: user.name,
+    avatar: user.avatar,
+  });
+});
+
+// 세션에서 사용자 정보 복원
+passport.deserializeUser((user, done) => {
+  // 세션에 저장된 사용자 정보를 그대로 반환
+  done(null, user);
+});
+
 export default passport;
 

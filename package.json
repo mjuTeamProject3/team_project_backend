@@ -7,7 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
-    "dev": "nodemon -e js,json,prisma --exec \"prisma generate && node src/index.js\"",
+    "dev": "npx nodemon -e js,json,prisma --exec \"prisma generate && node src/index.js\"",
     "migrate": "prisma migrate dev --name init",
     "dep:graph": "depcruise --output-type mermaid --include-only \"^src\" -- src > dependency-graph.mmd",
     "dep:graph:html": "depcruise --output-type mermaid --include-only \"^src\" -- src"
@@ -19,6 +19,7 @@
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.7.0",
     "axios": "^1.13.2",
+    "combined-stream": "^1.0.8",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
@@ -39,7 +40,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10",
-    "dependency-cruiser": "^16.1.3"
+    "dependency-cruiser": "^16.1.3",
+    "nodemon": "^3.1.10"
   }
 }
