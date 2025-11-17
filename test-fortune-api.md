@@ -10,9 +10,8 @@ curl -X POST http://localhost:3000/v1/api/fortune/calculate `
     "year": 1998,
     "month": 2,
     "day": 1,
-    "hour": 14,
-    "minute": 30,
-    "isLunar": false
+    "isLunar": false,
+    "gender": "female"
   }'
 ```
 
@@ -25,20 +24,17 @@ curl -X POST http://localhost:3000/v1/api/fortune/calculate `
     "heavenlyStems": {
       "year": "甲",
       "month": "乙",
-      "day": "丙",
-      "hour": "丁"
+      "day": "丙"
     },
     "earthlyBranches": {
       "year": "子",
       "month": "丑",
-      "day": "寅",
-      "hour": "卯"
+      "day": "寅"
     },
     "fiveElements": {
       "year": "木",
       "month": "木",
-      "day": "火",
-      "hour": "火"
+      "day": "火"
     },
     "zodiacSign": "子",
     "animalSign": "쥐"
@@ -57,17 +53,15 @@ curl -X POST http://localhost:3000/v1/api/fortune/compatibility `
       "year": 1998,
       "month": 2,
       "day": 1,
-      "hour": 14,
-      "minute": 30,
-      "isLunar": false
+      "isLunar": false,
+      "gender": "female"
     },
     "user2": {
       "year": 1995,
       "month": 7,
       "day": 15,
-      "hour": 9,
-      "minute": 0,
-      "isLunar": false
+      "isLunar": false,
+      "gender": "male"
     }
   }'
 ```
@@ -78,19 +72,27 @@ curl -X POST http://localhost:3000/v1/api/fortune/compatibility `
   "resultType": "SUCCESS",
   "error": null,
   "success": {
-    "score": 78,
+    "score": 74.5,
+    "finalScore": 74.5,
+    "originalScore": 82.1,
+    "stressScore": 33.8,
     "level": "high",
     "analysis": {
-      "overall": "임시 분석 결과입니다. 실제 로직으로 대체하세요.",
-      "strengths": [],
-      "weaknesses": [],
-      "advice": ""
+      "overall": "안정적인 호환성입니다. 대화를 자주 나눠보세요.",
+      "strengths": ["열정 · 에너지 · 예술 · 중독"],
+      "weaknesses": ["무난"],
+      "advice": "진짜 로직 연결 전 임시 메시지입니다."
     },
     "details": {
-      "heavenlyStems": 60,
-      "earthlyBranches": 65,
-      "fiveElements": 70,
-      "zodiacSign": 55
+      "skyYear": 51.2,
+      "skyDay": 80.3,
+      "earthYear": 65.5,
+      "earthMonth": 60.1,
+      "earthDay": 79.9
+    },
+    "traits": {
+      "user1": ["열정 · 에너지 · 예술 · 중독"],
+      "user2": ["무난"]
     }
   }
 }
@@ -104,9 +106,8 @@ $body = @{
     year = 1998
     month = 2
     day = 1
-    hour = 14
-    minute = 30
     isLunar = $false
+    gender = "female"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "http://localhost:3000/v1/api/fortune/calculate" `
@@ -122,17 +123,15 @@ $body = @{
         year = 1998
         month = 2
         day = 1
-        hour = 14
-        minute = 30
         isLunar = $false
+        gender = "female"
     }
     user2 = @{
         year = 1995
         month = 7
         day = 15
-        hour = 9
-        minute = 0
         isLunar = $false
+        gender = "male"
     }
 } | ConvertTo-Json -Depth 3
 
@@ -155,9 +154,8 @@ Invoke-RestMethod -Uri "http://localhost:3000/v1/api/fortune/compatibility" `
   "year": 1998,
   "month": 2,
   "day": 1,
-  "hour": 14,
-  "minute": 30,
-  "isLunar": false
+  "isLunar": false,
+  "gender": "female"
 }
 ```
 7. Send 클릭
@@ -176,9 +174,8 @@ fetch('http://localhost:3000/v1/api/fortune/calculate', {
     year: 1998,
     month: 2,
     day: 1,
-    hour: 14,
-    minute: 30,
-    isLunar: false
+    isLunar: false,
+    gender: "female"
   })
 })
 .then(res => res.json())
@@ -195,17 +192,15 @@ fetch('http://localhost:3000/v1/api/fortune/compatibility', {
       year: 1998,
       month: 2,
       day: 1,
-      hour: 14,
-      minute: 30,
-      isLunar: false
+      isLunar: false,
+      gender: "female"
     },
     user2: {
       year: 1995,
       month: 7,
       day: 15,
-      hour: 9,
-      minute: 0,
-      isLunar: false
+      isLunar: false,
+      gender: "male"
     }
   })
 })

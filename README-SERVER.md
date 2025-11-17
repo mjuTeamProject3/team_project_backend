@@ -102,11 +102,11 @@ npm run dev
 # 사주 계산
 curl -X POST http://localhost:3000/v1/api/fortune/calculate `
   -H "Content-Type: application/json" `
-  -d '{"year":1998,"month":2,"day":1,"hour":14,"minute":30,"isLunar":false}'
+  -d '{"year":1998,"month":2,"day":1,"isLunar":false,"gender":"female"}'
 
 # 궁합 분석
 curl -X POST http://localhost:3000/v1/api/fortune/compatibility `
   -H "Content-Type: application/json" `
-  -d '{"user1":{"year":1998,"month":2,"day":1,"hour":14,"minute":30,"isLunar":false},"user2":{"year":1995,"month":7,"day":15,"hour":9,"minute":0,"isLunar":false}}'
+  -d '{"user1":{"year":1998,"month":2,"day":1,"isLunar":false,"gender":"female"},"user2":{"year":1995,"month":7,"day":15,"isLunar":false,"gender":"male"}}'
 ```
 

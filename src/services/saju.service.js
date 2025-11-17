@@ -1,47 +1,30 @@
 import { prisma } from "../configs/db.config.js";
 import fortuneConfig from "../configs/fortune.config.js";
 
+const normalizeGender = (gender) => {
+  if (!gender) return "female";
+  const value = String(gender).trim().toLowerCase();
+  if (["male", "m", "man", "남", "남성"].includes(value)) return "male";
+  return "female";
+};
+
 /**
- * birthdate를 FortuneAPI가 요구하는 birthInfo 형식으로 변환
- * @param {Date|string|null} birthdate - 사용자의 생년월일
+ * 유저 객체를 FortuneAPI가 요구하는 birthInfo 형식으로 변환
+ * @param {Object|null} user - Prisma User 객체
  * @returns {Object|null} birthInfo 객체 또는 null
  */
-const convertToBirthInfo = (birthdate) => {
-  if (!birthdate) return null;
-  
-  const date = new Date(birthdate);
+const convertToBirthInfo = (user) => {
+  if (!user?.birthdate) return null;
+
+  const date = new Date(user.birthdate);
   if (isNaN(date.getTime())) return null;
-  
-  // 시간 정보 추출 (시간 정보가 없으면 12시로 기본값 설정)
-  // 생년월일만 있는 경우 (예: "1998-02-01") 시간 정보가 없으므로 기본값 12시 사용
-  // 원본 birthdate가 문자열인 경우 시간 부분이 있는지 확인
-  let hour = 12; // 기본값: 정오
-  let minute = 0;
-  
-  if (typeof birthdate === 'string') {
-    // 문자열 형식에서 시간 정보가 있는지 확인 (예: "1998-02-01T14:30:00" 또는 "1998-02-01 14:30")
-    const hasTimeInString = /T\d{2}:\d{2}/.test(birthdate) || /\s+\d{2}:\d{2}/.test(birthdate);
-    if (hasTimeInString) {
-      hour = date.getHours();
-      minute = date.getMinutes();
-    }
-  } else {
-    // Date 객체인 경우, 로컬 시간이 0시 0분이 아니면 사용 (시간 정보가 있다고 가정)
-    const localHour = date.getHours();
-    const localMinute = date.getMinutes();
-    if (localHour !== 0 || localMinute !== 0) {
-      hour = localHour;
-      minute = localMinute;
-    }
-  }
-  
+
   return {
     year: date.getFullYear(),
     month: date.getMonth() + 1, // 0-based to 1-based
     day: date.getDate(),
-    hour: hour,
-    minute: minute,
     isLunar: false, // 기본값: 양력 (User 모델에 isLunar 필드가 없음)
+    gender: normalizeGender(user.gender),
   };
 };
 
@@ -69,8 +52,8 @@ export const getCompatibilityScore = async ({ userIdA, userIdB }) => {
     };
   }
 
-  const birthInfoA = convertToBirthInfo(a.birthdate);
-  const birthInfoB = convertToBirthInfo(b.birthdate);
+  const birthInfoA = convertToBirthInfo(a);
+  const birthInfoB = convertToBirthInfo(b);
   
   if (!birthInfoA || !birthInfoB) {
     console.warn(`[saju] Invalid birthdate format: userA=${userIdA}, userB=${userIdB}`);

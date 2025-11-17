@@ -3,14 +3,20 @@
  * @param {Object} body - 요청 본문
  * @returns {Object} 생년월일시 정보
  */
+const normalizeGender = (gender) => {
+  if (!gender) return "female";
+  const value = String(gender).trim().toLowerCase();
+  if (["male", "m", "man", "남", "남성"].includes(value)) return "male";
+  return "female";
+};
+
 export const bodyToBirthInfo = (body) => {
   return {
     year: body.year,
     month: body.month,
     day: body.day,
-    hour: body.hour,
-    minute: body.minute || 0,
     isLunar: body.isLunar || false,
+    gender: normalizeGender(body.gender),
   };
 };
 
@@ -49,9 +55,13 @@ export const responseFromFortune = ({ fortune }) => {
 export const responseFromCompatibility = ({ compatibility }) => {
   return {
     score: compatibility.score,
+    finalScore: compatibility.finalScore,
+    originalScore: compatibility.originalScore,
+    stressScore: compatibility.stressScore,
     level: compatibility.level,
     analysis: compatibility.analysis,
     details: compatibility.details,
+    traits: compatibility.traits,
   };
 };
 

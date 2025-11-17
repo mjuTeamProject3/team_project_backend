@@ -8,9 +8,8 @@ $body = @{
     year = 1998
     month = 2
     day = 1
-    hour = 14
-    minute = 30
     isLunar = $false
+    gender = "female"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "http://localhost:3000/v1/api/fortune/calculate" `
@@ -26,17 +25,15 @@ $body = @{
         year = 1998
         month = 2
         day = 1
-        hour = 14
-        minute = 30
         isLunar = $false
+        gender = "female"
     }
     user2 = @{
         year = 1995
         month = 7
         day = 15
-        hour = 9
-        minute = 0
         isLunar = $false
+        gender = "male"
     }
 } | ConvertTo-Json -Depth 3
 
@@ -52,21 +49,21 @@ Invoke-RestMethod -Uri "http://localhost:3000/v1/api/fortune/compatibility" `
 ```powershell
 curl.exe -X POST http://localhost:3000/v1/api/fortune/calculate `
     -H "Content-Type: application/json" `
-    -d "{\"year\":1998,\"month\":2,\"day\":1,\"hour\":14,\"minute\":30,\"isLunar\":false}"
+    -d "{\"year\":1998,\"month\":2,\"day\":1,\"isLunar\":false,\"gender\":\"female\"}"
 ```
 
 ### 궁합 분석 테스트
 ```powershell
 curl.exe -X POST http://localhost:3000/v1/api/fortune/compatibility `
     -H "Content-Type: application/json" `
-    -d "{\"user1\":{\"year\":1998,\"month\":2,\"day\":1,\"hour\":14,\"minute\":30,\"isLunar\":false},\"user2\":{\"year\":1995,\"month\":7,\"day\":15,\"hour\":9,\"minute\":0,\"isLunar\":false}}"
+    -d "{\"user1\":{\"year\":1998,\"month\":2,\"day\":1,\"isLunar\":false,\"gender\":\"female\"},\"user2\":{\"year\":1995,\"month\":7,\"day\":15,\"isLunar\":false,\"gender\":\"male\"}}"
 ```
 
 ## 방법 3: 한 줄 명령어 (간단한 테스트)
 
 ### 사주 계산
 ```powershell
-curl.exe -X POST http://localhost:3000/v1/api/fortune/calculate -H "Content-Type: application/json" -d "{\"year\":1998,\"month\":2,\"day\":1,\"hour\":14,\"minute\":30,\"isLunar\":false}"
+curl.exe -X POST http://localhost:3000/v1/api/fortune/calculate -H "Content-Type: application/json" -d "{\"year\":1998,\"month\":2,\"day\":1,\"isLunar\":false,\"gender\":\"female\"}"
 ```
 
 ## 방법 4: Swagger UI 사용 (가장 쉬움) 🌟
@@ -80,9 +77,8 @@ curl.exe -X POST http://localhost:3000/v1/api/fortune/calculate -H "Content-Type
   "year": 1998,
   "month": 2,
   "day": 1,
-  "hour": 14,
-  "minute": 30,
-  "isLunar": false
+  "isLunar": false,
+  "gender": "female"
 }
 ```
 5. Execute 클릭
@@ -98,20 +94,17 @@ curl.exe -X POST http://localhost:3000/v1/api/fortune/calculate -H "Content-Type
     "heavenlyStems": {
       "year": "甲",
       "month": "乙",
-      "day": "丙",
-      "hour": "丁"
+      "day": "丙"
     },
     "earthlyBranches": {
       "year": "子",
       "month": "丑",
-      "day": "寅",
-      "hour": "卯"
+      "day": "寅"
     },
     "fiveElements": {
       "year": "木",
       "month": "木",
-      "day": "火",
-      "hour": "火"
+      "day": "火"
     },
     "zodiacSign": "子",
     "animalSign": "쥐"
