@@ -48,7 +48,8 @@
     
     <div class="controls">
       <div>
-        <input id="token" type="text" placeholder="JWT 토큰 입력" />
+        <input id="token" type="text" placeholder="JWT 토큰 입력" style="width: 400px;" />
+        <button id="loadToken" style="background: #6c757d;">토큰 불러오기</button>
         <button id="connect">연결</button>
         <button id="disconnect">연결 해제</button>
       </div>
@@ -115,12 +116,32 @@ const updateStatus = (text, className) => {
   statusEl.className = `status ${className}`;
 };
 
+// 토큰 불러오기
+document.getElementById('loadToken').onclick = () => {
+  const savedToken = localStorage.getItem('accessToken');
+  if (savedToken) {
+    document.getElementById('token').value = savedToken;
+    log('✅ 토큰을 localStorage에서 불러왔습니다');
+  } else {
+    alert('저장된 토큰이 없습니다.\n먼저 소셜 로그인을 해주세요.');
+    log('⚠️ localStorage에 토큰이 없습니다');
+  }
+};
+
 // Socket 연결
 document.getElementById('connect').onclick = async () => {
-  const token = document.getElementById('token').value.trim();
+  let token = document.getElementById('token').value.trim();
+  
+  // 토큰이 없으면 localStorage에서 자동으로 불러오기
   if (!token) {
-    alert('JWT 토큰을 입력하세요');
-    return;
+    token = localStorage.getItem('accessToken');
+    if (token) {
+      document.getElementById('token').value = token;
+      log('✅ localStorage에서 토큰을 자동으로 불러왔습니다');
+    } else {
+      alert('JWT 토큰을 입력하거나, 먼저 소셜 로그인을 해주세요.');
+      return;
+    }
   }
 
   socket = io(SERVER_URL, { auth: { token } });
@@ -477,6 +498,18 @@ document.getElementById('reportSubmit').onclick = () => {
   }
   socket.emit("user:report", { roomId, reason });
   document.getElementById('reason').value = '';
+};
+
+// 페이지 로드 시 토큰 자동 불러오기
+window.onload = () => {
+  const savedToken = localStorage.getItem('accessToken');
+  if (savedToken) {
+    document.getElementById('token').value = savedToken;
+    log('✅ 페이지 로드 시 토큰을 자동으로 불러왔습니다');
+    log('💡 "연결" 버튼을 클릭하여 Socket에 연결하세요');
+  } else {
+    log('💡 토큰 확인 방법:\n1. 소셜 로그인 후 auth-callback.html에서 토큰 확인\n2. "토큰 불러오기" 버튼 클릭\n3. 또는 auth-test.html에서 로그인 후 토큰 복사');
+  }
 };
 </script>
 </body>

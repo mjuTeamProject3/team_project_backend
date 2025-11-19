@@ -82,6 +82,48 @@
     <div id="refreshResult" class="result" style="display:none;"></div>
   </div>
 
+  <!-- 프로필 업데이트 -->
+  <div class="section">
+    <h2>4. 프로필 업데이트 (생년월일, 지역 등)</h2>
+    <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
+      소셜 로그인 후 추가 정보를 입력하세요. Access Token이 필요합니다.
+    </div>
+    <div>
+      <input type="text" id="updateUsername" placeholder="닉네임 (필수)" style="width: 200px;" />
+      <input type="date" id="updateBirthdate" placeholder="생년월일 (필수)" style="width: 200px;" />
+      <select id="updateLocation" style="width: 150px; padding: 10px; margin: 5px;">
+        <option value="">지역 선택 (필수)</option>
+        <option value="서울">서울</option>
+        <option value="경기">경기</option>
+        <option value="인천">인천</option>
+        <option value="부산">부산</option>
+        <option value="대구">대구</option>
+        <option value="광주">광주</option>
+        <option value="대전">대전</option>
+        <option value="울산">울산</option>
+        <option value="세종">세종</option>
+        <option value="강원">강원</option>
+        <option value="충북">충북</option>
+        <option value="충남">충남</option>
+        <option value="전북">전북</option>
+        <option value="전남">전남</option>
+        <option value="경북">경북</option>
+        <option value="경남">경남</option>
+        <option value="제주">제주</option>
+      </select>
+      <select id="updateGender" style="width: 120px; padding: 10px; margin: 5px;">
+        <option value="">성별 (선택)</option>
+        <option value="남성">남성</option>
+        <option value="여성">여성</option>
+      </select>
+    </div>
+    <div style="margin-top: 10px;">
+      <button onclick="updateProfile()">프로필 업데이트</button>
+      <button onclick="loadCurrentProfile()" style="background: #6c757d;">현재 프로필 불러오기</button>
+    </div>
+    <div id="updateResult" class="result" style="display:none;"></div>
+  </div>
+
 <script>
 // 현재 접속한 URL 자동 감지 (ngrok URL도 자동으로 사용)
 const API_BASE = `${window.location.origin}/v1/api`;
@@ -236,6 +278,105 @@ function copyAccessToken() {
   }).catch(err => {
     alert('복사 실패: ' + err.message);
   });
+}
+
+// 프로필 업데이트
+async function updateProfile() {
+  const accessToken = localStorage.getItem('accessToken') || document.getElementById('accessToken')?.textContent;
+  
+  if (!accessToken) {
+    alert('Access Token이 필요합니다. 먼저 로그인하세요.');
+    return;
+  }
+
+  const username = document.getElementById('updateUsername').value.trim();
+  const birthdate = document.getElementById('updateBirthdate').value;
+  const location = document.getElementById('updateLocation').value;
+  const gender = document.getElementById('updateGender').value || null;
+
+  if (!username || !birthdate || !location) {
+    alert('닉네임, 생년월일, 지역은 필수 입력 항목입니다.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/user/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({ username, birthdate, location, gender })
+    });
+
+    const data = await res.json();
+    const resultEl = document.getElementById('updateResult');
+    resultEl.style.display = 'block';
+
+    if (data.resultType === 'SUCCESS') {
+      resultEl.className = 'result success';
+      resultEl.innerHTML = `<strong>프로필 업데이트 성공!</strong><br>닉네임: ${data.success.username}<br>생년월일: ${data.success.birthdate || 'N/A'}<br>지역: ${data.success.location || 'N/A'}<br>성별: ${data.success.gender || 'N/A'}`;
+    } else {
+      resultEl.className = 'result error';
+      resultEl.innerHTML = `<strong>프로필 업데이트 실패:</strong><br>${data.error?.reason || '알 수 없는 오류'}`;
+    }
+  } catch (err) {
+    const resultEl = document.getElementById('updateResult');
+    resultEl.style.display = 'block';
+    resultEl.className = 'result error';
+    resultEl.innerHTML = `<strong>오류:</strong><br>${err.message}`;
+  }
+}
+
+// 현재 프로필 불러오기
+async function loadCurrentProfile() {
+  const accessToken = localStorage.getItem('accessToken') || document.getElementById('accessToken')?.textContent;
+  
+  if (!accessToken) {
+    alert('Access Token이 필요합니다. 먼저 로그인하세요.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/user`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    const data = await res.json();
+    const resultEl = document.getElementById('updateResult');
+    resultEl.style.display = 'block';
+
+    if (data.resultType === 'SUCCESS') {
+      resultEl.className = 'result success';
+      resultEl.innerHTML = `<strong>프로필 불러오기 성공!</strong>`;
+      
+      // 폼에 현재 값 채우기
+      if (data.success.username) {
+        document.getElementById('updateUsername').value = data.success.username;
+      }
+      if (data.success.birthdate) {
+        const date = new Date(data.success.birthdate);
+        document.getElementById('updateBirthdate').value = date.toISOString().split('T')[0];
+      }
+      if (data.success.location) {
+        document.getElementById('updateLocation').value = data.success.location;
+      }
+      if (data.success.gender) {
+        document.getElementById('updateGender').value = data.success.gender;
+      }
+    } else {
+      resultEl.className = 'result error';
+      resultEl.innerHTML = `<strong>프로필 불러오기 실패:</strong><br>${data.error?.reason || '알 수 없는 오류'}`;
+    }
+  } catch (err) {
+    const resultEl = document.getElementById('updateResult');
+    resultEl.style.display = 'block';
+    resultEl.className = 'result error';
+    resultEl.innerHTML = `<strong>오류:</strong><br>${err.message}`;
+  }
 }
 
 // 페이지 로드 시 저장된 토큰 확인
