@@ -9,6 +9,7 @@
     "start": "node src/index.js",
     "dev": "npx nodemon -e js,json,prisma --exec \"prisma generate && node src/index.js\"",
     "migrate": "prisma migrate dev --name init",
+    "seed:ranking": "node scripts/seed-ranking.js",
     "dep:graph": "depcruise --output-type mermaid --include-only \"^src\" -- src > dependency-graph.mmd",
     "dep:graph:html": "depcruise --output-type mermaid --include-only \"^src\" -- src"
   },
