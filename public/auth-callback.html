@@ -110,15 +110,17 @@
     </div>
     
     <div class="spinner"></div>
-    <p style="color: #666; font-size: 14px;">잠시 후 메인 페이지로 이동합니다...</p>
-    <a href="/" class="link">지금 이동하기</a>
+    <p style="color: #666; font-size: 14px;">앱으로 이동 중...</p>
+    <button id="openAppBtn" class="link" style="border: none; cursor: pointer; margin-top: 20px;" onclick="redirectToApp()">앱으로 이동하기</button>
   </div>
 
 <script>
-// URL에서 토큰 추출
+// URL에서 토큰 및 파라미터 추출
 const params = new URLSearchParams(window.location.search);
 const accessToken = params.get('accessToken');
 const refreshToken = params.get('refreshToken');
+const profileComplete = params.get('profileComplete');
+const missingFields = params.get('missingFields');
 
 // 토큰 복사 함수
 function copyToken(tokenId) {
@@ -130,7 +132,56 @@ function copyToken(tokenId) {
   });
 }
 
-// 토큰 저장 및 표시
+// 앱 스킴으로 리다이렉트하는 함수
+function redirectToApp() {
+  const appScheme = 'fatetry://auth/callback';
+  let redirectUrl = `${appScheme}?accessToken=${encodeURIComponent(accessToken)}`;
+  
+  if (refreshToken) {
+    redirectUrl += `&refreshToken=${encodeURIComponent(refreshToken)}`;
+  }
+  
+  if (profileComplete !== null) {
+    redirectUrl += `&profileComplete=${encodeURIComponent(profileComplete)}`;
+  }
+  
+  if (missingFields) {
+    redirectUrl += `&missingFields=${encodeURIComponent(missingFields)}`;
+  }
+  
+  console.log('앱으로 리다이렉트 시도:', redirectUrl);
+  
+  // WebBrowser가 이 URL을 콜백으로 감지할 수 있도록
+  // 먼저 현재 URL을 유지한 채로 앱 스킴으로 리다이렉트 시도
+  // iframe을 사용해서 백그라운드에서 앱 열기 시도
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = redirectUrl;
+  document.body.appendChild(iframe);
+  
+  // location.replace로 시도 (페이지 히스토리에서 제거)
+  setTimeout(() => {
+    try {
+      window.location.replace(redirectUrl);
+    } catch (e) {
+      window.location.href = redirectUrl;
+    }
+  }, 200);
+  
+  // 1초 후 다시 시도
+  setTimeout(() => {
+    window.location.replace(redirectUrl);
+  }, 1000);
+  
+  // 2초 후 iframe 제거
+  setTimeout(() => {
+    if (iframe.parentNode) {
+      iframe.parentNode.removeChild(iframe);
+    }
+  }, 2000);
+}
+
+  // 토큰 저장 및 표시
 if (accessToken) {
   localStorage.setItem('accessToken', accessToken);
   if (refreshToken) {
@@ -143,10 +194,12 @@ if (accessToken) {
   document.getElementById('accessToken').textContent = accessToken;
   document.getElementById('refreshToken').textContent = refreshToken || 'N/A';
   
-  // 3초 후 메인 페이지로 이동
-  setTimeout(() => {
-    window.location.href = '/';
-  }, 3000);
+  // WebBrowser.openAuthSessionAsync가 이 URL을 콜백으로 감지할 수 있도록
+  // 페이지를 즉시 닫지 않고, WebBrowser가 URL을 감지할 시간을 줌
+  // WebBrowser는 콜백 URL과 일치하는 URL을 감지하면 자동으로 result.type을 'success'로 설정함
+  
+  // 즉시 앱으로 리다이렉트하지 않고, WebBrowser가 URL을 감지할 시간을 줌
+  // 실제로는 WebBrowser가 이 페이지를 자동으로 감지해야 함
 } else {
   document.querySelector('.message').textContent = '토큰을 받지 못했습니다. 다시 로그인해주세요.';
   document.querySelector('.spinner').style.display = 'none';

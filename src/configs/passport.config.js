@@ -16,7 +16,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         try {
           const user = {
             provider: "google",
-            socialId: profile.id,
+            socialId: String(profile.id), // String으로 변환 (Prisma 스키마가 String이므로)
             email: profile.emails[0].value,
             name: profile.displayName || profile.name?.givenName || "",
             avatar: profile.photos?.[0]?.value || null,
@@ -45,7 +45,7 @@ if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
         try {
           const user = {
             provider: "kakao",
-            socialId: profile.id,
+            socialId: String(profile.id), // String으로 변환 (카카오는 숫자 ID를 제공하지만 DB는 String)
             email: profile._json?.kakao_account?.email || `${profile.id}@kakao.com`,
             name: profile._json?.kakao_account?.profile?.nickname || profile.username || "",
             avatar: profile._json?.kakao_account?.profile?.profile_image_url || null,
@@ -74,7 +74,7 @@ if (process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET) {
         try {
           const user = {
             provider: "naver",
-            socialId: profile.id,
+            socialId: String(profile.id), // String으로 변환 (Prisma 스키마가 String이므로)
             email: profile.emails?.[0]?.value || `${profile.id}@naver.com`,
             name: profile.displayName || profile._json?.name || "",
             avatar: profile._json?.profile_image || null,

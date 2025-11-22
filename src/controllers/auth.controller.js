@@ -562,24 +562,19 @@ export const handleSocialCallback = async (req, res, next) => {
     // 프로필 완성도 체크
     const profileStatus = checkProfileComplete(user);
     
-    // 리다이렉트 URL 결정
+    // HTML 페이지를 거쳐 앱으로 리다이렉트 (브라우저 컨텍스트 유지)
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     
     if (profileStatus.isComplete) {
-      // 프로필 완성 → 토큰 발급 후 메인 페이지
+      // 프로필 완성 → 토큰 발급 후 메인 페이지로
       const auth = await issueTokens(user.id);
-      const redirectUrl = `${baseUrl}/auth/callback?accessToken=${auth.accessToken}&refreshToken=${auth.refreshToken}`;
+      const redirectUrl = `${baseUrl}/auth/callback?accessToken=${auth.accessToken}&refreshToken=${auth.refreshToken}&profileComplete=true`;
       res.redirect(redirectUrl);
     } else {
-      // 프로필 미완성 → 세션에 사용자 ID 저장 후 추가 정보 입력 페이지로 리다이렉트
-      req.session.socialUserId = user.id;
-      req.session.save((err) => {
-        if (err) {
-          return next(err);
-        }
-        const redirectUrl = `${baseUrl}/auth/setup?missing=${profileStatus.missingFields.join(',')}`;
-        res.redirect(redirectUrl);
-      });
+      // 프로필 미완성 → 토큰 발급 후 프로필 정보 입력 페이지로
+      const auth = await issueTokens(user.id);
+      const redirectUrl = `${baseUrl}/auth/callback?accessToken=${auth.accessToken}&refreshToken=${auth.refreshToken}&profileComplete=false&missingFields=${encodeURIComponent(profileStatus.missingFields.join(','))}`;
+      res.redirect(redirectUrl);
     }
   } catch (err) {
     return next(err);
@@ -588,6 +583,7 @@ export const handleSocialCallback = async (req, res, next) => {
 
 // 소셜 로그인 에러 핸들러
 export const handleSocialError = (err, req, res, next) => {
-  const redirectUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/auth/error?error=${encodeURIComponent(err.message || "소셜 로그인에 실패했습니다.")}`;
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const redirectUrl = `${baseUrl}/auth/error?error=${encodeURIComponent(err.message || "소셜 로그인에 실패했습니다.")}`;
   res.redirect(redirectUrl);
 };

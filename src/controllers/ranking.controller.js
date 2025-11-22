@@ -16,7 +16,19 @@ export const monthly = async (req, res, next) => {
 
 export const local = async (req, res, next) => {
   try {
-    const userId = req.user?.id || req.auth?.userId;
+    // verifyAccessToken 미들웨어에서 req.user.userId로 설정됨
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({
+        resultType: "FAIL",
+        error: {
+          errorCode: "unauthorized",
+          reason: "로그인이 필요합니다.",
+          data: null,
+        },
+        success: null,
+      });
+    }
     const list = await rankingService.getTopLocal({ userId, limit: 5 });
     res.json(list);
   } catch (e) { next(e); }

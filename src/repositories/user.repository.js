@@ -32,11 +32,14 @@ export const updateUser = async ({ userId, data }) => {
 
 // 소셜 로그인 사용자 찾기 또는 생성
 export const findOrCreateSocialUser = async (data) => {
+  // socialId를 String으로 변환 (안전장치)
+  const socialIdString = String(data.socialId);
+  
   // provider와 socialId로 먼저 찾기
   let user = await prisma.user.findFirst({
     where: {
       provider: data.provider,
-      socialId: data.socialId,
+      socialId: socialIdString,
     },
   });
 
@@ -57,7 +60,7 @@ export const findOrCreateSocialUser = async (data) => {
       where: { id: user.id },
       data: {
         provider: data.provider,
-        socialId: data.socialId,
+        socialId: socialIdString,
         avatar: data.avatar || user.avatar,
       },
     });
@@ -82,7 +85,7 @@ export const findOrCreateSocialUser = async (data) => {
       name: data.name,
       username: username,
       provider: data.provider,
-      socialId: data.socialId,
+      socialId: socialIdString,
       avatar: data.avatar || null,
       password: null, // 소셜 로그인은 비밀번호 없음
     },
