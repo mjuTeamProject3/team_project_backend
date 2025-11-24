@@ -99,13 +99,18 @@ export const refresh = async (data) => {
 };
 
 // 소셜 로그인 (사용자만 찾기/생성, 토큰 발급 안 함)
-export const socialLogin = async (socialUser) => {
+export const socialLogin = async (socialUser, additionalInfo = null) => {
   const user = await findOrCreateSocialUser({
     provider: socialUser.provider,
     socialId: socialUser.socialId,
     email: socialUser.email,
     name: socialUser.name,
     avatar: socialUser.avatar,
+    // 추가 정보 전달
+    username: additionalInfo?.username || null,
+    birthdate: additionalInfo?.birthdate || null,
+    location: additionalInfo?.location || null,
+    gender: additionalInfo?.gender || null,
   });
 
   // 토큰 발급하지 않고 사용자 정보만 반환

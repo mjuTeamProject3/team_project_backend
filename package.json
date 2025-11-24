@@ -20,6 +20,7 @@
     "@prisma/client": "^6.7.0",
     "axios": "^1.13.2",
     "combined-stream": "^1.0.8",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
