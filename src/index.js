@@ -4,6 +4,7 @@ import http from "http";
 import cors from "cors";
 import swaggerUiExpress from "swagger-ui-express";
 import session from "express-session";
+import cookieParser from "cookie-parser";
 import apiRoute from "./routes/index.route.js";
 import { initSocket } from "./realtime/socket.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
@@ -18,6 +19,7 @@ const server = http.createServer(app);
 const port = process.env.PORT || 3000;
 
 app.use(cors(corsOptions));
+app.use(cookieParser()); // 쿠키 파서 추가 (반드시 필요!)
 app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

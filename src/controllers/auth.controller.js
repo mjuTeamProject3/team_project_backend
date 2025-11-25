@@ -547,11 +547,28 @@ export const handleSocialCallback = async (req, res, next) => {
     // 🔍 디버깅: 콜백 수신 정보 확인
     console.log('📥 콜백 수신 - req.query.state:', req.query.state);
     console.log('📥 콜백 수신 - req.query 전체:', JSON.stringify(req.query));
+    console.log('💾 세션 ID:', req.sessionID);
     console.log('💾 세션에서 state 확인:', req.session?.oauthState);
+    console.log('🍪 쿠키에서 state 확인:', req.cookies?.oauth_state);
     
     // OAuth state 파라미터에서 플랫폼 정보 및 추가 정보 디코딩
-    // state는 req.query.state 또는 세션에서 가져오기
-    const stateParam = req.query.state || req.session?.oauthState;
+    // state는 req.query.state → 쿠키 → 세션 순서로 확인
+    let stateParam = req.query.state;
+    if (!stateParam) {
+      // 쿠키에서 가져오기 (우선순위 높음)
+      stateParam = req.cookies?.oauth_state;
+      if (stateParam) {
+        console.log('✅ 쿠키에서 state 가져옴');
+        // 쿠키 삭제 (사용 후 정리)
+        res.clearCookie('oauth_state');
+      } else {
+        // 세션에서 가져오기 (백업)
+        stateParam = req.session?.oauthState;
+        if (stateParam) {
+          console.log('✅ 세션에서 state 가져옴');
+        }
+      }
+    }
     let platform = 'web';
     let additionalInfo = null;
     

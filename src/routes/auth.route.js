@@ -26,15 +26,23 @@ route.get("/protected", verifyAccessToken, handleProtect);
 
 // 구글 소셜 로그인
 route.get("/google", (req, res, next) => {
-  // state 파라미터를 세션에 저장
+  // state 파라미터를 쿠키에 저장 (세션 ID 변경 문제 해결)
   if (req.query.state) {
+    // 쿠키에 state 저장 (OAuth 리다이렉트 과정에서도 유지됨)
+    res.cookie('oauth_state', req.query.state, {
+      httpOnly: true,
+      secure: false, // HTTPS에서는 true
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000 // 10분
+    });
+    console.log('💾 State 쿠키에 저장:', req.query.state);
+    // 세션에도 백업 저장
     req.session.oauthState = req.query.state;
     req.session.save((err) => {
       if (err) {
         console.error('세션 저장 오류:', err);
         return next(err);
       }
-      console.log('💾 State 세션에 저장:', req.query.state);
       passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
     });
   } else {
@@ -50,15 +58,21 @@ route.get("/google/error", handleSocialError);
 
 // 카카오 소셜 로그인
 route.get("/kakao", (req, res, next) => {
-  // state 파라미터를 세션에 저장
+  // state 파라미터를 쿠키에 저장
   if (req.query.state) {
+    res.cookie('oauth_state', req.query.state, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000
+    });
+    console.log('💾 State 쿠키에 저장:', req.query.state);
     req.session.oauthState = req.query.state;
     req.session.save((err) => {
       if (err) {
         console.error('세션 저장 오류:', err);
         return next(err);
       }
-      console.log('💾 State 세션에 저장:', req.query.state);
       passport.authenticate("kakao")(req, res, next);
     });
   } else {
@@ -74,15 +88,21 @@ route.get("/kakao/error", handleSocialError);
 
 // 네이버 소셜 로그인
 route.get("/naver", (req, res, next) => {
-  // state 파라미터를 세션에 저장
+  // state 파라미터를 쿠키에 저장
   if (req.query.state) {
+    res.cookie('oauth_state', req.query.state, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000
+    });
+    console.log('💾 State 쿠키에 저장:', req.query.state);
     req.session.oauthState = req.query.state;
     req.session.save((err) => {
       if (err) {
         console.error('세션 저장 오류:', err);
         return next(err);
       }
-      console.log('💾 State 세션에 저장:', req.query.state);
       passport.authenticate("naver")(req, res, next);
     });
   } else {
