@@ -163,4 +163,89 @@ export const saveSajuKeywords = async ({ userId, sajuKeywords }) => {
   return {};
 };
 
+/**
+ * 개인 사주 키워드 계산 (기본 사용자와의 궁합 분석을 통해)
+ * @param {number} userId - 사용자 ID
+ * @returns {Promise<Array<string>|null>} 사주 키워드 배열 또는 null
+ */
+export const getUserSajuKeywords = async ({ userId }) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.birthdate) {
+    return null; // 생년월일이 없으면 키워드 계산 불가
+  }
+
+  // 기본 사용자 정보 (중립적인 기준점으로 사용)
+  const defaultBirthInfo = {
+    year: 2000,
+    month: 1,
+    day: 1,
+    isLunar: false,
+    gender: "male" // 기본값
+  };
+
+  const userBirthInfo = convertToBirthInfo(user);
+  if (!userBirthInfo) return null;
+
+  const url = fortuneConfig.FORTUNE_API_URL?.replace(/\/$/, "");
+  if (!url) {
+    console.warn("[saju] FORTUNE_API_URL is not set");
+    return null;
+  }
+
+  try {
+    const payload = {
+      user1: { birthInfo: userBirthInfo },
+      user2: { birthInfo: defaultBirthInfo }
+    };
+
+    const res = await fetch(`${url}/fortune/compatibility`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "");
+      console.error(`[saju] FortuneAPI error ${res.status}: ${errorText}`);
+      return null;
+    }
+
+    const data = await res.json();
+    // user1이 요청한 사용자이므로 user1의 키워드 반환
+    return data.traits?.user1 || null;
+  } catch (e) {
+    console.error("[saju] getUserSajuKeywords error:", e.message);
+    return null;
+  }
+};
+
+/**
+ * 사용자의 사주 키워드를 가져오거나 계산해서 반환
+ * @param {number} userId - 사용자 ID
+ * @returns {Promise<Array<string>|null>} 사주 키워드 배열 또는 null
+ */
+export const getOrCalculateSajuKeywords = async ({ userId }) => {
+  const user = await prisma.user.findUnique({ 
+    where: { id: userId },
+    select: { sajuKeywords: true, birthdate: true }
+  });
+
+  // DB에 저장된 키워드가 있으면 반환
+  if (user?.sajuKeywords && Array.isArray(user.sajuKeywords) && user.sajuKeywords.length > 0) {
+    return user.sajuKeywords;
+  }
+
+  // 없으면 계산 (생년월일이 있는 경우만)
+  if (user?.birthdate) {
+    const keywords = await getUserSajuKeywords({ userId });
+    if (keywords && keywords.length > 0) {
+      // 계산한 키워드를 DB에 저장 (비동기, 에러 무시)
+      saveSajuKeywords({ userId, keywords })
+        .catch(err => console.error("[saju] Failed to save keywords:", err));
+      return keywords;
+    }
+  }
+
+  return null;
+};
 

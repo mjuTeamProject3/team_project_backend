@@ -1,4 +1,4 @@
-import { requestFriendship, updateFriendshipStatus } from "../repositories/friend.repository.js";
+import { requestFriendship, updateFriendshipStatus, getFriendsList } from "../repositories/friend.repository.js";
 import { InvalidRequestError } from "../errors/auth.error.js";
 
 export const requestFriend = async ({ requesterId, addresseeId }) => {
@@ -17,4 +17,13 @@ export const declineFriend = async ({ userAId, userBId }) => {
   return {};
 };
 
+/**
+ * 친구 목록 조회
+ * @param {Object} params - { userId, limit, offset }
+ * @returns {Promise<Object>} 친구 목록
+ */
+export const getMyFriends = async ({ userId, limit, offset }) => {
+  const friends = await getFriendsList({ userId, limit, offset });
+  return { friends };
+};
 

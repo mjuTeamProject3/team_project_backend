@@ -4,6 +4,7 @@ import { signUp, signIn, signOut, refresh, socialLogin, issueTokens } from "../s
 import { InvalidRequestError } from "../errors/auth.error.js";
 import { getUser } from "../repositories/user.repository.js";
 import { checkProfileComplete } from "../services/user.service.js";
+import { getOrCalculateSajuKeywords } from "../services/saju.service.js";
 
 export const handleSignUp = async (req, res, next) => {
   /*
@@ -636,6 +637,19 @@ export const handleSocialCallback = async (req, res, next) => {
     
     // 추가 정보를 state로 받았으므로 프로필이 완성되어 있어야 함
     if (profileStatus.isComplete) {
+      // 프로필 완성 → 사주 키워드 계산 및 저장
+      try {
+        const sajuKeywords = await getOrCalculateSajuKeywords({ userId: user.id });
+        if (sajuKeywords && sajuKeywords.length > 0) {
+          console.log('✅ 사주 키워드 계산 완료:', sajuKeywords);
+        } else {
+          console.warn('⚠️ 사주 키워드 계산 실패 또는 결과 없음');
+        }
+      } catch (err) {
+        console.error('❌ 사주 키워드 계산 중 에러:', err.message);
+        // 에러가 발생해도 로그인은 계속 진행
+      }
+      
       // 프로필 완성 → 토큰 발급 후 리다이렉트
       const auth = await issueTokens(user.id);
       

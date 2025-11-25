@@ -1,15 +1,26 @@
-import { responseFromUser } from "../dtos/user.dto.js";
+import { responseFromUser, responseFromOtherUser } from "../dtos/user.dto.js";
 import { getUserWithCounts, getUser, updateUser } from "../repositories/user.repository.js";
 import { InvalidRequestError } from "../errors/auth.error.js";
 import { prisma } from "../configs/db.config.js";
+import { getOrCalculateSajuKeywords } from "../services/saju.service.js";
 
 export const userProfile = async (userId) => {
   const user = await getUserWithCounts({ targetUserId: userId });
   if (!user) {
     throw new InvalidRequestError("유저를 찾을 수 없습니다.");
   }
+  
+  // 사주 키워드 가져오기 (DB에 있으면 사용, 없으면 계산)
+  const sajuKeywords = await getOrCalculateSajuKeywords({ userId });
+  
+  // 사주 키워드를 user 객체에 추가
+  const userWithKeywords = {
+    ...user,
+    sajuKeywords: sajuKeywords || user.sajuKeywords || null
+  };
+  
   return responseFromUser({
-    user,
+    user: userWithKeywords,
   });
 };
 
@@ -18,7 +29,18 @@ export const otherUserProfile = async ({ targetUserId }) => {
   if (!user) {
     throw new InvalidRequestError("유저를 찾을 수 없습니다.");
   }
-  return responseFromUser({ user });
+  
+  // 사주 키워드 가져오기 (DB에 있으면 사용, 없으면 계산)
+  const sajuKeywords = await getOrCalculateSajuKeywords({ userId: targetUserId });
+  
+  // 사주 키워드를 user 객체에 추가
+  const userWithKeywords = {
+    ...user,
+    sajuKeywords: sajuKeywords || user.sajuKeywords || null
+  };
+  
+  // 다른 사람 프로필은 공개 정보만 반환
+  return responseFromOtherUser({ user: userWithKeywords });
 };
 
 /**
@@ -86,6 +108,19 @@ export const updateProfile = async ({ userId, username, birthdate, location, gen
   
   // 업데이트
   const updated = await updateUser({ userId, data: updateData });
+  
+  // 생년월일이 변경되었거나 새로 입력된 경우 사주 키워드 재계산
+  if (birthdate !== undefined && birthdate !== null) {
+    try {
+      const sajuKeywords = await getOrCalculateSajuKeywords({ userId });
+      if (sajuKeywords && sajuKeywords.length > 0) {
+        console.log('✅ 프로필 업데이트 후 사주 키워드 계산 완료:', sajuKeywords);
+      }
+    } catch (err) {
+      console.error('❌ 사주 키워드 계산 중 에러:', err.message);
+      // 에러가 발생해도 프로필 업데이트는 계속 진행
+    }
+  }
   
   return responseFromUser({ user: updated });
 };
