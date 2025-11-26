@@ -1,7 +1,9 @@
 import { StatusCodes } from "http-status-codes";
 import { bodyToSignUp, bodyToSignIn, bodyToRefresh } from "../dtos/auth.dto.js";
-import { signUp, signIn, signOut, refresh, socialLogin } from "../services/auth.service.js";
+import { signUp, signIn, signOut, refresh, socialLogin, issueTokens } from "../services/auth.service.js";
 import { InvalidRequestError } from "../errors/auth.error.js";
+import { getUser } from "../repositories/user.repository.js";
+import { checkProfileComplete } from "../services/user.service.js";
 
 export const handleSignUp = async (req, res, next) => {
   /*
@@ -554,12 +556,31 @@ export const handleSocialCallback = async (req, res, next) => {
       });
     }
 
-    const auth = await socialLogin(req.user);
+    // 사용자 찾기/생성 (토큰 발급 안 함)
+    const user = await socialLogin(req.user);
     
-    // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터나 리다이렉트 URL로 전달)
-    const redirectUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/auth/callback?accessToken=${auth.accessToken}&refreshToken=${auth.refreshToken}`;
+    // 프로필 완성도 체크
+    const profileStatus = checkProfileComplete(user);
     
-    res.redirect(redirectUrl);
+    // 리다이렉트 URL 결정
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    
+    if (profileStatus.isComplete) {
+      // 프로필 완성 → 토큰 발급 후 메인 페이지
+      const auth = await issueTokens(user.id);
+      const redirectUrl = `${baseUrl}/auth/callback?accessToken=${auth.accessToken}&refreshToken=${auth.refreshToken}`;
+      res.redirect(redirectUrl);
+    } else {
+      // 프로필 미완성 → 세션에 사용자 ID 저장 후 추가 정보 입력 페이지로 리다이렉트
+      req.session.socialUserId = user.id;
+      req.session.save((err) => {
+        if (err) {
+          return next(err);
+        }
+        const redirectUrl = `${baseUrl}/auth/setup?missing=${profileStatus.missingFields.join(',')}`;
+        res.redirect(redirectUrl);
+      });
+    }
   } catch (err) {
     return next(err);
   }

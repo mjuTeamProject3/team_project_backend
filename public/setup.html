@@ -1,0 +1,287 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>프로필 설정 - FateTry</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+    background: #f5f5f5;
+  }
+  .container {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  h1 {
+    color: #333;
+    margin-bottom: 10px;
+  }
+  .subtitle {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .form-group {
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+  }
+  .required {
+    color: #dc3545;
+  }
+  input[type="text"],
+  input[type="date"],
+  select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  .error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
+    display: none;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  button:hover {
+    background: #0056b3;
+  }
+  button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  .result {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+  }
+  .result.success {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+  }
+  .result.error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+  }
+  .info {
+    margin-top: 20px;
+    padding: 10px;
+    background: #e7f3ff;
+    border-left: 4px solid #007bff;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #666;
+  }
+</style>
+<body>
+  <div class="container">
+    <h1>📝 프로필 설정</h1>
+    <p class="subtitle">소셜 로그인 후 추가 정보를 입력해주세요.</p>
+    
+    <form id="profileForm">
+      <div class="form-group">
+        <label for="username">닉네임 <span class="required">*</span></label>
+        <input type="text" id="username" placeholder="닉네임을 입력하세요" required />
+        <div class="error" id="usernameError"></div>
+      </div>
+      
+      <div class="form-group">
+        <label for="birthdate">생년월일 <span class="required">*</span></label>
+        <input type="date" id="birthdate" required />
+        <div class="error" id="birthdateError"></div>
+      </div>
+      
+      <div class="form-group">
+        <label for="location">지역 <span class="required">*</span></label>
+        <select id="location" required>
+          <option value="">선택하세요</option>
+          <option value="서울">서울</option>
+          <option value="경기">경기</option>
+          <option value="인천">인천</option>
+          <option value="부산">부산</option>
+          <option value="대구">대구</option>
+          <option value="광주">광주</option>
+          <option value="대전">대전</option>
+          <option value="울산">울산</option>
+          <option value="세종">세종</option>
+          <option value="강원">강원</option>
+          <option value="충북">충북</option>
+          <option value="충남">충남</option>
+          <option value="전북">전북</option>
+          <option value="전남">전남</option>
+          <option value="경북">경북</option>
+          <option value="경남">경남</option>
+          <option value="제주">제주</option>
+        </select>
+        <div class="error" id="locationError"></div>
+      </div>
+      
+      <div class="form-group">
+        <label for="gender">성별 (선택)</label>
+        <select id="gender">
+          <option value="">선택하세요</option>
+          <option value="남성">남성</option>
+          <option value="여성">여성</option>
+        </select>
+      </div>
+      
+      <button type="submit" id="submitBtn">완료</button>
+    </form>
+    
+    <div class="result" id="result"></div>
+    
+    <div class="info">
+      <strong>💡 안내:</strong> 생년월일과 지역 정보는 궁합 분석에 사용됩니다.
+    </div>
+  </div>
+
+<script>
+// URL에서 누락된 필드 정보 추출
+const params = new URLSearchParams(window.location.search);
+const missingFields = params.get('missing')?.split(',') || [];
+
+// API 기본 URL
+const API_BASE = `${window.location.origin}/v1/api`;
+
+// 폼 제출
+document.getElementById('profileForm').onsubmit = async (e) => {
+  e.preventDefault();
+  
+  const submitBtn = document.getElementById('submitBtn');
+  const resultEl = document.getElementById('result');
+  
+  // 에러 메시지 숨기기
+  document.querySelectorAll('.error').forEach(el => {
+    el.style.display = 'none';
+  });
+  
+  // 버튼 비활성화
+  submitBtn.disabled = true;
+  submitBtn.textContent = '처리 중...';
+  
+  const data = {
+    username: document.getElementById('username').value.trim(),
+    birthdate: document.getElementById('birthdate').value,
+    location: document.getElementById('location').value,
+    gender: document.getElementById('gender').value || null,
+  };
+  
+  // 필수 필드 검증
+  if (!data.username) {
+    document.getElementById('usernameError').textContent = '닉네임을 입력해주세요.';
+    document.getElementById('usernameError').style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = '완료';
+    return;
+  }
+  
+  if (!data.birthdate) {
+    document.getElementById('birthdateError').textContent = '생년월일을 선택해주세요.';
+    document.getElementById('birthdateError').style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = '완료';
+    return;
+  }
+  
+  if (!data.location) {
+    document.getElementById('locationError').textContent = '지역을 선택해주세요.';
+    document.getElementById('locationError').style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = '완료';
+    return;
+  }
+  
+  try {
+    // 세션 쿠키를 포함하여 요청 (credentials: 'include')
+    const res = await fetch(`${API_BASE}/auth/setup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // 세션 쿠키 포함
+      body: JSON.stringify(data),
+    });
+    
+    const result = await res.json();
+    
+    if (result.resultType === 'SUCCESS') {
+      resultEl.className = 'result success';
+      resultEl.style.display = 'block';
+      resultEl.textContent = '프로필이 성공적으로 설정되었습니다! 토큰이 발급되었습니다. 3초 후 메인 페이지로 이동합니다...';
+      
+      // 토큰 저장
+      if (result.success?.accessToken) {
+        localStorage.setItem('accessToken', result.success.accessToken);
+        if (result.success.refreshToken) {
+          localStorage.setItem('refreshToken', result.success.refreshToken);
+        }
+      }
+      
+      // 3초 후 메인 페이지로 이동
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 3000);
+    } else {
+      resultEl.className = 'result error';
+      resultEl.style.display = 'block';
+      resultEl.textContent = result.error?.reason || '프로필 설정에 실패했습니다.';
+      
+      // 특정 필드 에러 표시
+      if (result.error?.reason?.includes('닉네임')) {
+        document.getElementById('usernameError').textContent = result.error.reason;
+        document.getElementById('usernameError').style.display = 'block';
+      }
+      
+      // 세션 만료 에러
+      if (result.error?.errorCode === 'session_expired') {
+        resultEl.textContent = '세션이 만료되었습니다. 소셜 로그인을 다시 시도해주세요.';
+        setTimeout(() => {
+          window.location.href = '/auth-test.html';
+        }, 3000);
+      }
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = '완료';
+    }
+  } catch (err) {
+    resultEl.className = 'result error';
+    resultEl.style.display = 'block';
+    resultEl.textContent = '오류가 발생했습니다: ' + err.message;
+    submitBtn.disabled = false;
+    submitBtn.textContent = '완료';
+  }
+};
+
+// 페이지 로드 시 누락된 필드 표시
+window.onload = () => {
+  if (missingFields.length > 0) {
+    const info = document.querySelector('.info');
+    info.innerHTML = `<strong>💡 안내:</strong> 다음 정보를 입력해주세요: ${missingFields.join(', ')}`;
+  }
+};
+</script>
+</body>
+

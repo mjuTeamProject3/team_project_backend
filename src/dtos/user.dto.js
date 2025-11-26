@@ -16,3 +16,12 @@ export const responseFromUser = ({ user }) => {
     updatedAt: user.updatedAt,
   };
 };
+
+export const bodyToProfileUpdate = (body) => {
+  return {
+    username: body.username || null,
+    birthdate: body.birthdate || null,
+    location: body.location || null,
+    gender: body.gender || null,
+  };
+};
