@@ -60,5 +60,41 @@
     "roomId": "room_10_9",
     "reason": "강민석 ㅈ같네요",
     "createdAt": "2025-11-12T11:10:41.948Z"
+  },
+  {
+    "id": "r_1764587578282_2w059z",
+    "reporterUserId": 9,
+    "targetUserId": 1,
+    "targetUsername": "다니다",
+    "roomId": "room_1_9",
+    "reason": "이 미친놈 개변태 개걸레임",
+    "createdAt": "2025-12-01T11:12:58.282Z"
+  },
+  {
+    "id": "r_1764588491794_g1v3y0",
+    "reporterUserId": 1,
+    "targetUserId": 10,
+    "targetUsername": "장명준처럼",
+    "roomId": "room_1_10",
+    "reason": "이름이 맘에안듬",
+    "createdAt": "2025-12-01T11:28:11.794Z"
+  },
+  {
+    "id": "r_1764589197233_d9wla3",
+    "reporterUserId": 1,
+    "targetUserId": 10,
+    "targetUsername": "하윙",
+    "roomId": "room_1_10",
+    "reason": "걍",
+    "createdAt": "2025-12-01T11:39:57.233Z"
+  },
+  {
+    "id": "r_1764589747637_7j66ps",
+    "reporterUserId": 10,
+    "targetUserId": 1,
+    "targetUsername": "반갑습니다들",
+    "roomId": "room_1_10",
+    "reason": "걍",
+    "createdAt": "2025-12-01T11:49:07.637Z"
   }
 ]

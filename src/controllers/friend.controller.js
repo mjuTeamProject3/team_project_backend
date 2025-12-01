@@ -1,9 +1,24 @@
 import { StatusCodes } from "http-status-codes";
 import { acceptFriend, declineFriend, requestFriend, getMyFriends } from "../services/friend.service.js";
 
+export const handleGetFriends = async (req, res, next) => {
+  try {
+    const result = await getMyFriends({ userId: req.user.userId });
+    res.status(StatusCodes.OK).success(result);
+  } catch (err) {
+    return next(err);
+  }
+};
+
 export const handleFriendRequest = async (req, res, next) => {
   try {
-    await requestFriend({ requesterId: req.user.userId, addresseeId: Number(req.params.id) });
+    // Socket.io 인스턴스 가져오기
+    const io = req.app.get('io');
+    await requestFriend({ 
+      requesterId: req.user.userId, 
+      addresseeId: Number(req.params.id),
+      io 
+    });
     res.status(StatusCodes.OK).success({});
   } catch (err) {
     return next(err);
@@ -28,19 +43,4 @@ export const handleFriendDecline = async (req, res, next) => {
   }
 };
 
-/**
- * 친구 목록 조회
- */
-export const handleGetFriends = async (req, res, next) => {
-  try {
-    const userId = req.user.userId;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = parseInt(req.query.offset) || 0;
-    
-    const result = await getMyFriends({ userId, limit, offset });
-    res.status(StatusCodes.OK).success(result);
-  } catch (err) {
-    return next(err);
-  }
-};
 

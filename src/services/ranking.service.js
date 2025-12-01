@@ -26,6 +26,9 @@ export const getTopMonthly = async (limit = 5, baseDate = new Date()) => {
 };
 
 export const getTopLocal = async ({ userId, limit = 5 }) => {
+  // userId가 없으면 빈 배열 반환
+  if (!userId) return [];
+  
   const me = await prisma.user.findUnique({ where: { id: userId }, select: { location: true } });
   const location = me?.location || null;
   if (!location) return [];

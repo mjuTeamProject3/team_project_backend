@@ -70,6 +70,8 @@ export const initSocket = (httpServer, { corsOptions }) => {
     const userId = socket.data.userId;
     userIdToSocket.set(userId, socket);
     socketIdToUser.set(socket.id, userId);
+    // 사용자 개인 알림 룸에 조인
+    socket.join(`user_${userId}`);
     console.log(`[socket] connected user=${userId} sid=${socket.id}`);
 
     // Debug any events
@@ -142,14 +144,14 @@ export const initSocket = (httpServer, { corsOptions }) => {
       }
     });
 
-    socket.on("message:send", ({ roomId, text, imageUrl }) => {
+    socket.on("message:send", ({ roomId, text, imageUrl, isSystem }) => {
       let rid = roomId;
       if (!rooms.has(rid)) {
         for (const [r, p] of rooms) { if (p.a === userId || p.b === userId) { rid = r; break; } }
       }
       if (!rooms.has(rid)) return;
       if (!text && !imageUrl) return;
-      io.to(rid).emit("message:new", { userId, text: text || '', imageUrl: imageUrl || null, ts: Date.now() });
+      io.to(rid).emit("message:new", { userId, text: text || '', imageUrl: imageUrl || null, ts: Date.now(), isSystem: isSystem || false });
     });
 
     socket.on("chat:end", ({ roomId, reason }, cb) => {
@@ -189,6 +191,14 @@ export const initSocket = (httpServer, { corsOptions }) => {
         await saveReport({ reporterUserId: userId, targetUserId, targetUsername, roomId: rid, reason: reason || null });
         socket.emit("user:reported", { ok: true });
         console.log(`[report] saved against user=${targetUserId}`);
+        
+        // 신고 후 자동으로 채팅 종료 처리
+        const endEvent = pair.type === 'video' ? "video:ended" : "chat:ended";
+        io.to(rid).emit(endEvent, { reason: "reported" });
+        const socketsInRoom = new Set(io.of("/").adapter.rooms.get(rid) || []);
+        for (const s of socketsInRoom) { const client = io.sockets.sockets.get(s); client?.leave(rid); }
+        rooms.delete(rid);
+        console.log(`[report] closed room=${rid} type=${pair.type} due to report`);
       } catch (e) {
         console.error("user:report error", e?.message || e);
         socket.emit("user:reported", { ok: false, error: String(e?.message || e) });
@@ -200,7 +210,6 @@ export const initSocket = (httpServer, { corsOptions }) => {
         let rid = roomId; let pair = rooms.get(rid) || null;
         if (!pair) { for (const [r, p] of rooms) { if (p.a === userId || p.b === userId) { pair = p; rid = r; break; } } }
         if (!pair) return;
-        if (pair.topicsSuggested) { socket.emit("topics:already", { message: "이미 대화 주제를 추천했습니다." }); return; }
         
         // FortuneAPI를 사용한 대화 주제 추천
         let topics = [];
@@ -209,6 +218,8 @@ export const initSocket = (httpServer, { corsOptions }) => {
           try {
             topics = await getSajuTopics(pair.fullAnalysis);
             console.log(`[topics] FortuneAPI 추천: ${topics.length}개 주제`);
+            // 주제 개수를 3개로 제한
+            topics = topics.slice(0, 3);
           } catch (e) {
             console.error("[topics] FortuneAPI error:", e?.message || e);
             // FortuneAPI 실패 시 빈 배열 반환
@@ -218,8 +229,7 @@ export const initSocket = (httpServer, { corsOptions }) => {
           console.warn(`[topics] No fullAnalysis for room=${rid}`);
         }
         
-        pair.topicsSuggested = true; 
-        rooms.set(rid, pair);
+        // topicsSuggested 플래그는 제거 (여러 번 요청 가능하도록)
         io.to(rid).emit("topics:list", { topics });
       } catch (e) {
         console.error("topics:suggest error", e?.message || e);

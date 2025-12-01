@@ -16,7 +16,7 @@ export const monthly = async (req, res, next) => {
 
 export const local = async (req, res, next) => {
   try {
-    const userId = req.user?.id || req.auth?.userId;
+    const userId = req.user?.userId;
     const list = await rankingService.getTopLocal({ userId, limit: 5 });
     res.json(list);
   } catch (e) { next(e); }

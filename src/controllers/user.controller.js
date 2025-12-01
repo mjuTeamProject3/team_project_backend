@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { otherUserProfile, userProfile, updateProfile, checkProfileComplete } from "../services/user.service.js";
+import { otherUserProfile, userProfile, updateProfile, checkProfileComplete, searchUsers } from "../services/user.service.js";
 import { likeUser, unlikeUser } from "../services/like.service.js";
 import { bodyToProfileUpdate } from "../dtos/user.dto.js";
 import { issueTokens } from "../services/auth.service.js";
@@ -141,8 +141,27 @@ export const handleUserProfile = async (req, res, next) => {
 
 export const handleUserProfileById = async (req, res, next) => {
   try {
-    const user = await otherUserProfile({ targetUserId: Number(req.params.id) });
+    const currentUserId = req.user?.userId || null;
+    const user = await otherUserProfile({ 
+      targetUserId: Number(req.params.id),
+      currentUserId 
+    });
     res.status(StatusCodes.OK).success(user);
+  } catch (err) {
+    return next(err);
+  }
+};
+
+export const handleSearchUsers = async (req, res, next) => {
+  try {
+    const { q, limit, offset } = req.query;
+    const result = await searchUsers({ 
+      query: q, 
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+      excludeUserId: req.user.userId 
+    });
+    res.status(StatusCodes.OK).success(result);
   } catch (err) {
     return next(err);
   }
@@ -150,7 +169,13 @@ export const handleUserProfileById = async (req, res, next) => {
 
 export const handleLikeUser = async (req, res, next) => {
   try {
-    await likeUser({ fromUserId: req.user.userId, toUserId: Number(req.params.id) });
+    // Socket.io 인스턴스 가져오기
+    const io = req.app.get('io');
+    await likeUser({ 
+      fromUserId: req.user.userId, 
+      toUserId: Number(req.params.id),
+      io 
+    });
     res.status(StatusCodes.OK).success({});
   } catch (err) {
     return next(err);

@@ -1,8 +1,8 @@
-import { responseFromUser, responseFromOtherUser } from "../dtos/user.dto.js";
+import { responseFromUser } from "../dtos/user.dto.js";
 import { getUserWithCounts, getUser, updateUser } from "../repositories/user.repository.js";
 import { InvalidRequestError } from "../errors/auth.error.js";
 import { prisma } from "../configs/db.config.js";
-import { getOrCalculateSajuKeywords } from "../services/saju.service.js";
+import { getOrCalculateSajuKeywords } from "./saju.service.js";
 
 export const userProfile = async (userId) => {
   const user = await getUserWithCounts({ targetUserId: userId });
@@ -10,37 +10,37 @@ export const userProfile = async (userId) => {
     throw new InvalidRequestError("유저를 찾을 수 없습니다.");
   }
   
-  // 사주 키워드 가져오기 (DB에 있으면 사용, 없으면 계산)
-  const sajuKeywords = await getOrCalculateSajuKeywords({ userId });
-  
-  // 사주 키워드를 user 객체에 추가
-  const userWithKeywords = {
-    ...user,
-    sajuKeywords: sajuKeywords || user.sajuKeywords || null
-  };
+  // 사주 키워드 가져오기 또는 계산
+  const sajuKeywords = await getOrCalculateSajuKeywords(userId);
+  if (sajuKeywords.length > 0) {
+    user.sajuKeywords = sajuKeywords;
+  }
   
   return responseFromUser({
-    user: userWithKeywords,
+    user,
   });
 };
 
-export const otherUserProfile = async ({ targetUserId }) => {
+export const otherUserProfile = async ({ targetUserId, currentUserId = null }) => {
   const user = await getUserWithCounts({ targetUserId });
   if (!user) {
     throw new InvalidRequestError("유저를 찾을 수 없습니다.");
   }
   
-  // 사주 키워드 가져오기 (DB에 있으면 사용, 없으면 계산)
-  const sajuKeywords = await getOrCalculateSajuKeywords({ userId: targetUserId });
+  // 사주 키워드 가져오기 또는 계산
+  const sajuKeywords = await getOrCalculateSajuKeywords(targetUserId);
+  if (sajuKeywords.length > 0) {
+    user.sajuKeywords = sajuKeywords;
+  }
   
-  // 사주 키워드를 user 객체에 추가
-  const userWithKeywords = {
-    ...user,
-    sajuKeywords: sajuKeywords || user.sajuKeywords || null
-  };
+  // 좋아요 상태 확인
+  let isLiked = false;
+  if (currentUserId && currentUserId !== targetUserId) {
+    const { hasUserLiked } = await import("../repositories/like.repository.js");
+    isLiked = await hasUserLiked({ fromUserId: currentUserId, toUserId: targetUserId });
+  }
   
-  // 다른 사람 프로필은 공개 정보만 반환
-  return responseFromOtherUser({ user: userWithKeywords });
+  return responseFromUser({ user, isLiked });
 };
 
 /**
@@ -109,18 +109,41 @@ export const updateProfile = async ({ userId, username, birthdate, location, gen
   // 업데이트
   const updated = await updateUser({ userId, data: updateData });
   
-  // 생년월일이 변경되었거나 새로 입력된 경우 사주 키워드 재계산
+  // 생년월일이 변경되었으면 사주 키워드 재계산
   if (birthdate !== undefined && birthdate !== null) {
-    try {
-      const sajuKeywords = await getOrCalculateSajuKeywords({ userId });
-      if (sajuKeywords && sajuKeywords.length > 0) {
-        console.log('✅ 프로필 업데이트 후 사주 키워드 계산 완료:', sajuKeywords);
-      }
-    } catch (err) {
-      console.error('❌ 사주 키워드 계산 중 에러:', err.message);
-      // 에러가 발생해도 프로필 업데이트는 계속 진행
+    console.log('[user] Birthdate updated, recalculating sajuKeywords for user:', userId);
+    const sajuKeywords = await getOrCalculateSajuKeywords(userId);
+    if (sajuKeywords.length > 0) {
+      updated.sajuKeywords = sajuKeywords;
+    }
+  } else {
+    // 생년월일이 변경되지 않았어도 키워드가 없으면 계산
+    const sajuKeywords = await getOrCalculateSajuKeywords(userId);
+    if (sajuKeywords.length > 0) {
+      updated.sajuKeywords = sajuKeywords;
     }
   }
   
   return responseFromUser({ user: updated });
+};
+
+/**
+ * 사용자 검색 (닉네임으로)
+ * @param {Object} data - { query, limit, offset, excludeUserId }
+ * @returns {Object} 검색된 사용자 목록
+ */
+export const searchUsers = async ({ query, limit, offset, excludeUserId }) => {
+  if (!query || query.trim().length === 0) {
+    return { users: [] };
+  }
+  
+  const { searchUsersByUsername } = await import("../repositories/user.repository.js");
+  const users = await searchUsersByUsername({ 
+    query: query.trim(), 
+    limit: limit || 20, 
+    offset: offset || 0,
+    excludeUserId 
+  });
+  
+  return { users };
 };

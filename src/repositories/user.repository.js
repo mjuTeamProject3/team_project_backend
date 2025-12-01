@@ -129,3 +129,33 @@ export const findOrCreateSocialUser = async (data) => {
 
   return created;
 };
+
+export const searchUsersByUsername = async ({ query, limit = 20, offset = 0, excludeUserId }) => {
+  // MySQL에서는 contains만 사용 (대소문자 구분은 DB 설정에 따름)
+  const where = {
+    username: {
+      contains: query,
+    },
+  };
+  
+  if (excludeUserId) {
+    where.NOT = { id: excludeUserId };
+  }
+  
+  const users = await prisma.user.findMany({
+    where,
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      avatar: true,
+      location: true,
+    },
+    take: limit,
+    skip: offset,
+    orderBy: {
+      username: 'asc',
+    },
+  });
+  return users;
+};

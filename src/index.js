@@ -61,7 +61,9 @@ app.get("/auth/setup", (req, res) => {
 app.use(errorHandler);
 
 // Initialize WebSocket server
-initSocket(server, { corsOptions });
+const io = initSocket(server, { corsOptions });
+// Socket.io 인스턴스를 app에 저장 (컨트롤러에서 사용)
+app.set('io', io);
 
 server.listen(port, () => {
   console.log(`Server: http://localhost:${port}`);
